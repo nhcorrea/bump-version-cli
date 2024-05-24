@@ -15,6 +15,68 @@ interface AndroidConfig {
   versionName: string | null;
 }
 
+type IOSConfig = {
+  CURRENT_PROJECT_VERSION: string | null;
+  MARKETING_VERSION: string | null;
+};
+
+const IOS_PROJECT_PATH = "./ios";
+const IOS_REST_PATH = ".xcodeproj/project.pbxproj";
+
+function readIOSConfig(projectName: string): IOSConfig | null {
+  try {
+    const projectFilePath = `${IOS_PROJECT_PATH}/${projectName}${IOS_REST_PATH}`;
+    const projectFile = fs.readFileSync(projectFilePath, "utf8");
+
+    const currentProjectVersionMatch = projectFile.match(
+      /CURRENT_PROJECT_VERSION = (\S+)/
+    );
+    const marketingVersionMatch = projectFile.match(
+      /MARKETING_VERSION = "([^"]+)"/
+    );
+
+    const currentProjectVersion = currentProjectVersionMatch
+      ? currentProjectVersionMatch[1]
+      : null;
+    const marketingVersion = marketingVersionMatch
+      ? marketingVersionMatch[1]
+      : null;
+
+    return {
+      CURRENT_PROJECT_VERSION: currentProjectVersion,
+      MARKETING_VERSION: marketingVersion,
+    };
+  } catch (e) {
+    console.error("Erro ao ler o arquivo project.pbxproj:", e);
+    return null;
+  }
+}
+
+function writeNewIOSVersion(
+  projectName: string,
+  newProjectVersion: string,
+  newMarketingVersion: string
+) {
+  try {
+    const projectFilePath = `${IOS_PROJECT_PATH}/${projectName}.xcodeproj/project.pbxproj`;
+
+    let projectFile = fs.readFileSync(projectFilePath, "utf8");
+
+    projectFile = projectFile.replace(
+      /CURRENT_PROJECT_VERSION = (\S+)/g,
+      `CURRENT_PROJECT_VERSION = ${newProjectVersion}`
+    );
+    projectFile = projectFile.replace(
+      /MARKETING_VERSION = (\d+\.\d+\.\d+);/g,
+      `MARKETING_VERSION = ${newMarketingVersion};`
+    );
+
+    fs.writeFileSync(projectFilePath, projectFile, "utf8");
+  } catch (e) {
+    console.error("Erro ao atualizar a versão do iOS:", e);
+  }
+}
+
 const ANDROID_BUILD_GRADLE = "./android/app/build.gradle";
 const ANDROID_ENCODE_OPTIONS: AndroidConfigFS = "utf8";
 
@@ -169,5 +231,62 @@ program
       });
     });
   });
+
+program.command("ios <projectName>").action((projectName) => {
+  const iosConfig = readIOSConfig(projectName);
+
+  if (!iosConfig) {
+    console.error(
+      "Erro ao ler o arquivo project.pbxproj. Certifique-se de estar no diretório correto."
+    );
+    return;
+  }
+
+  console.clear();
+
+  const prettyLog = figlet.textSync("bump-version-cli", {
+    font: "Ogre",
+    horizontalLayout: "full",
+    verticalLayout: "default",
+  });
+
+  console.log(`${colors.green}${prettyLog}${colors.reset}`);
+
+  console.log("\n\n");
+
+  // console.log(
+  //   `${colors.cyan}created by:${colors.reset} ${colors.yellow}@nhcorrea${colors.reset} (
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.question(
+    "Digite o MARKETING_VERSION (Marketing Version) ",
+    (newMarketingVersion) => {
+      rl.question(
+        "Digite o CURRENT_PROJECT_VERSION (Build Version) ",
+        (newProjectVersion) => {
+          writeNewIOSVersion(
+            projectName,
+            newProjectVersion,
+            newMarketingVersion
+          );
+          // writeNewAndroidVersion(newVersionCode, newVersionName);
+          const _iosConfig = readIOSConfig(projectName);
+
+          // if (_iosConfig) {
+          //   const isFinish = true;
+          //   console.log("\n");
+          //   statusAndroidVersion(_androidConfig, isFinish);
+          //   console.log("\n");
+          // }
+
+          rl.close();
+        }
+      );
+    }
+  );
+});
 
 program.parse(process.argv);
