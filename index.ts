@@ -2,6 +2,7 @@
 import * as readline from "readline";
 import figlet from "figlet";
 import { Command } from "commander";
+import { version } from "./package.json";
 import { COLORS } from "./src/theme/colors";
 import {
   initAndroidLogs,
@@ -29,7 +30,7 @@ export function headerCLI() {
   });
 
   const prettyLogWithColor = `${COLORS.YELLOW}${prettyLog}${COLORS.RESET}`;
-  const versionWithColor = `${COLORS.BRIGHT}v0.0.1${COLORS.RESET}`;
+  const versionWithColor = `${COLORS.BRIGHT}${version}${COLORS.RESET}`;
 
   console.log(`${prettyLogWithColor}${versionWithColor}`);
   console.log("\n\n");
@@ -41,7 +42,7 @@ export function headerCLI() {
 const program = new Command();
 
 program
-  .version("@nhcorrea/bump-version-cli\nv0.0.1")
+  .version(`@nhcorrea/bump-version-cli\nv${version}`)
   .description("CLI para gerenciar versões do projeto");
 
 program.command("android-version").action(() => {
