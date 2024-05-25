@@ -4,6 +4,9 @@
   "description": "A CLI tool to bump the version of your project",
   "packageManager": "yarn@3.8.2",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "bin": "./dist/index.js",
   "scripts": {
     "build": "tsc",
