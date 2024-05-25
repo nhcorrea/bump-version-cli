@@ -30,7 +30,7 @@ export function headerCLI() {
   });
 
   const prettyLogWithColor = `${COLORS.YELLOW}${prettyLog}${COLORS.RESET}`;
-  const versionWithColor = `${COLORS.BRIGHT}${version}${COLORS.RESET}`;
+  const versionWithColor = `${COLORS.BRIGHT}v${version}${COLORS.RESET}`;
 
   console.log(`${prettyLogWithColor}${versionWithColor}`);
   console.log("\n\n");
