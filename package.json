@@ -1,6 +1,6 @@
 {
   "name": "@nhcorrea/bump-version-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A CLI tool to bump the version of your project",
   "packageManager": "yarn@3.8.2",
   "main": "dist/index.js",
