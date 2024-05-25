@@ -1,133 +1,85 @@
+#!/usr/bin/env node
 import * as readline from "readline";
-import * as fs from "fs";
-import { Command } from "commander";
 import figlet from "figlet";
+import { Command } from "commander";
+import { COLORS } from "./src/theme/colors";
+import {
+  initAndroidLogs,
+  readAndroidBuildGradle,
+  statusAndroidVersion,
+  writeNewAndroidBuildGradle,
+} from "./src/lib/android";
+import {
+  initIOSLogs,
+  readIOSConfig,
+  statusIOSVersion,
+  writeNewIOSVersion,
+} from "./src/lib/ios";
 
-type AndroidConfigFS =
-  | {
-      encoding: BufferEncoding;
-      flag?: string | undefined;
-    }
-  | BufferEncoding;
+const baseColor = (text: string) =>
+  `${COLORS.BG_WHITE}${COLORS.BLACK}${text}${COLORS.RESET} `;
 
-interface AndroidConfig {
-  versionCode: string | null;
-  versionName: string | null;
-}
+const VERSION_SEMANTIC_REGEX = /^\d+\.\d+\.\d+$/;
 
-const ANDROID_BUILD_GRADLE = "./android/app/build.gradle";
-const ANDROID_ENCODE_OPTIONS: AndroidConfigFS = "utf8";
-
-function readAndroidConfig(): AndroidConfig | null {
-  try {
-    const buildGradleFile = fs.readFileSync(
-      ANDROID_BUILD_GRADLE,
-      ANDROID_ENCODE_OPTIONS
-    );
-
-    const versionCodeMatch = buildGradleFile.match(/versionCode\s+(\d+)/);
-    const versionNameMatch = buildGradleFile.match(/versionName\s+"([^"]+)"/);
-
-    const versionCode = versionCodeMatch ? versionCodeMatch[1] : null;
-    const versionName = versionNameMatch ? versionNameMatch[1] : null;
-
-    return {
-      versionCode,
-      versionName,
-    };
-  } catch (e) {
-    console.error("Erro ao ler build.gradle", e);
-    return null;
-  }
-}
-
-function writeNewAndroidVersion(
-  newVersionCode: string,
-  newVersionName: string
-) {
-  try {
-    let data = fs.readFileSync(ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS);
-
-    data = data.replace(/versionCode\s+\d+/g, `versionCode ${newVersionCode}`);
-    data = data.replace(
-      /versionName\s+"[^"]+"/g,
-      `versionName "${newVersionName}"`
-    );
-
-    fs.writeFileSync(ANDROID_BUILD_GRADLE, data, ANDROID_ENCODE_OPTIONS);
-  } catch (e) {
-    console.error("Erro ao atualizar a versão do Android:", e);
-  }
-}
-
-function headerAndroidCLI() {
-  let prettyLog = figlet.textSync("bump-version-cli", {
+export function headerCLI() {
+  const prettyLog = figlet.textSync("bump-version", {
     font: "Ogre",
     horizontalLayout: "full",
     verticalLayout: "default",
   });
 
-  let prettyLogWithColor = `${colors.green}${prettyLog}${colors.reset}`;
-  let versionWithColor = `${colors.bright}v0.0.1${colors.reset}`;
+  const prettyLogWithColor = `${COLORS.YELLOW}${prettyLog}${COLORS.RESET}`;
+  const versionWithColor = `${COLORS.BRIGHT}v0.0.1${COLORS.RESET}`;
 
   console.log(`${prettyLogWithColor}${versionWithColor}`);
-
   console.log("\n\n");
-
   console.log(
-    `${colors.cyan}created by:${colors.reset} ${colors.yellow}@nhcorrea${colors.reset} (https://github.com/nhcorrea)`
+    `${COLORS.CYAN}created by:${COLORS.RESET} ${COLORS.YELLOW}@nhcorrea${COLORS.RESET} (https://github.com/nhcorrea)`
   );
-}
-
-function statusAndroidVersion(androidConfig: AndroidConfig, isFinish = false) {
-  const brightText = (text: string) =>
-    `${colors.black}${colors.bgWhite}${text}${colors.reset}`;
-
-  const versionCodeStatus = brightText("Version Code (Build):");
-  const versionNameStatus = brightText("Version Name (Marketing Version):");
-
-  const versionCode = `${colors.black}${colors.bgGreen}  ${androidConfig.versionCode} ${colors.reset}`;
-  const versionName = `${colors.black}${colors.bgGreen}  ${androidConfig.versionName} ${colors.reset}`;
-
-  const headerText = isFinish
-    ? "Versão do Android atualizada com sucesso!"
-    : "Versão atual do Android:";
-
-  console.log(`\n${colors.black}${colors.bgGreen}${headerText}${colors.reset}`);
-
-  console.log(`${versionNameStatus}${versionName}`);
-  console.log(`${versionCodeStatus}${versionCode}`);
-}
-
-function initAndroidLogs(androidConfig: AndroidConfig) {
-  console.clear();
-  headerAndroidCLI();
-  console.log("\n");
-  statusAndroidVersion(androidConfig);
-  console.log("\n\n");
 }
 
 const program = new Command();
 
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  black: "\x1b[30m",
-  green: "\x1b[32m",
-  cyan: "\x1b[36m",
-  yellow: "\x1b[33m",
-  bgBlack: "\x1b[40m",
-  bgGreen: "\x1b[42m",
-  bgCyan: "\x1b[46m",
-  bgWhite: "\x1b[47m",
-};
+program
+  .version("@nhcorrea/bump-version-cli\nv0.0.1")
+  .description("CLI para gerenciar versões do projeto");
+
+program.command("android-version").action(() => {
+  const androidBuildGradle = readAndroidBuildGradle();
+
+  if (!androidBuildGradle) {
+    console.error(
+      "Erro ao ler build.gradle. Certifique-se de estar no diretório correto."
+    );
+    return;
+  }
+
+  console.clear();
+  headerCLI();
+  initAndroidLogs(androidBuildGradle);
+});
+
+program.command("ios-version <projectName>").action((projectName) => {
+  const iosConfig = readIOSConfig(projectName);
+
+  if (!iosConfig) {
+    console.error(
+      "Erro ao ler o arquivo project.pbxproj. Certifique-se de estar no diretório correto."
+    );
+    return;
+  }
+
+  console.clear();
+  headerCLI();
+  initIOSLogs(iosConfig);
+});
 
 program
   .command("android")
   .description("Atualiza a versão do aplicativo Android")
   .option("-v, --version", "Exibe a versão atual do Android")
   .action(() => {
-    const androidConfig = readAndroidConfig();
+    const androidConfig = readAndroidBuildGradle();
 
     if (!androidConfig) {
       console.error(
@@ -136,6 +88,8 @@ program
       return;
     }
 
+    console.clear();
+    headerCLI();
     initAndroidLogs(androidConfig);
 
     const rl = readline.createInterface({
@@ -143,20 +97,58 @@ program
       output: process.stdout,
     });
 
-    const baseColor = (text: string) =>
-      `${colors.bgGreen}${colors.black}${text}${colors.reset} `;
-
     const newCodeVersionQuestion = baseColor(
-      `Digite o novo Version Code (Build Version) (atual: ${androidConfig.versionCode}):`
+      `Digite o novo Version Code (Build Version) (atual: ${androidConfig.buildVersion}):`
     );
     const newVersionNameQuestion = baseColor(
-      `Digite o novo Version Name (Marketing Version) (atual: ${androidConfig.versionName}):`
+      `Digite o novo Version Name (Marketing Version) (atual: ${androidConfig.marketingVersion}):`
     );
 
     rl.question(newVersionNameQuestion, (newVersionName) => {
+      if (!newVersionName) {
+        console.error(
+          "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+        );
+
+        rl.close();
+        return;
+      }
+
+      if (!VERSION_SEMANTIC_REGEX.test(newVersionName)) {
+        console.error(
+          "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+        );
+        rl.close();
+        return;
+      }
+
       rl.question(newCodeVersionQuestion, (newVersionCode) => {
-        writeNewAndroidVersion(newVersionCode, newVersionName);
-        const _androidConfig = readAndroidConfig();
+        if (!newVersionCode) {
+          console.error(
+            "\nVocê deve inserir um valor para o Version Code (Build Version)"
+          );
+          rl.close();
+          return;
+        }
+
+        const versionCode = Number(newVersionCode);
+
+        if (
+          isNaN(versionCode) ||
+          versionCode < 0 ||
+          !Number.isInteger(versionCode)
+        ) {
+          console.error(
+            "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+          );
+
+          rl.close();
+          return;
+        }
+
+        writeNewAndroidBuildGradle(newVersionCode, newVersionName);
+
+        const _androidConfig = readAndroidBuildGradle();
 
         if (_androidConfig) {
           const isFinish = true;
@@ -169,5 +161,89 @@ program
       });
     });
   });
+
+program.command("ios <projectName>").action((projectName) => {
+  const iosConfig = readIOSConfig(projectName);
+
+  if (!iosConfig) {
+    console.error(
+      "Erro ao ler o arquivo project.pbxproj. Certifique-se de estar no diretório correto."
+    );
+    return;
+  }
+
+  console.clear();
+  headerCLI();
+  initIOSLogs(iosConfig);
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const newMarketingVersionQuestion = baseColor(
+    "Digite o MARKETING_VERSION (Marketing Version):"
+  );
+  const newProjectVersionQuestion = baseColor(
+    "Digite o CURRENT_PROJECT_VERSION (Build Version):"
+  );
+
+  rl.question(newMarketingVersionQuestion, (newMarketingVersion) => {
+    if (!newMarketingVersion) {
+      console.error(
+        "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+      );
+
+      rl.close();
+      return;
+    }
+
+    if (!VERSION_SEMANTIC_REGEX.test(newMarketingVersion)) {
+      console.error(
+        "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+      );
+      rl.close();
+      return;
+    }
+
+    rl.question(newProjectVersionQuestion, (newProjectVersion) => {
+      if (!newProjectVersion) {
+        console.error(
+          "\nVocê deve inserir um valor para o Version Code (Build Version)"
+        );
+        rl.close();
+        return;
+      }
+
+      const versionCode = Number(newProjectVersion);
+
+      if (
+        isNaN(versionCode) ||
+        versionCode < 0 ||
+        !Number.isInteger(versionCode)
+      ) {
+        console.error(
+          "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+        );
+
+        rl.close();
+        return;
+      }
+
+      writeNewIOSVersion(projectName, newProjectVersion, newMarketingVersion);
+
+      const _iosConfig = readIOSConfig(projectName);
+
+      if (_iosConfig) {
+        const isFinish = true;
+        console.log("\n");
+        statusIOSVersion(_iosConfig, isFinish);
+        console.log("\n");
+      }
+
+      rl.close();
+    });
+  });
+});
 
 program.parse(process.argv);
