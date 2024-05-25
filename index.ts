@@ -1,7 +1,7 @@
 import * as readline from "readline";
 import figlet from "figlet";
 import { Command } from "commander";
-import { colors } from "./src/theme/colors";
+import { COLORS } from "./src/theme/colors";
 import {
   initAndroidLogs,
   readAndroidBuildGradle,
@@ -15,6 +15,11 @@ import {
   writeNewIOSVersion,
 } from "./src/lib/ios";
 
+const baseColor = (text: string) =>
+  `${COLORS.BG_WHITE}${COLORS.BLACK}${text}${COLORS.RESET} `;
+
+const VERSION_SEMANTIC_REGEX = /^\d+\.\d+\.\d+$/;
+
 export function headerCLI() {
   const prettyLog = figlet.textSync("bump-version", {
     font: "Ogre",
@@ -22,13 +27,13 @@ export function headerCLI() {
     verticalLayout: "default",
   });
 
-  const prettyLogWithColor = `${colors.yellow}${prettyLog}${colors.reset}`;
-  const versionWithColor = `${colors.bright}v0.0.1${colors.reset}`;
+  const prettyLogWithColor = `${COLORS.YELLOW}${prettyLog}${COLORS.RESET}`;
+  const versionWithColor = `${COLORS.BRIGHT}v0.0.1${COLORS.RESET}`;
 
   console.log(`${prettyLogWithColor}${versionWithColor}`);
   console.log("\n\n");
   console.log(
-    `${colors.cyan}created by:${colors.reset} ${colors.yellow}@nhcorrea${colors.reset} (https://github.com/nhcorrea)`
+    `${COLORS.CYAN}created by:${COLORS.RESET} ${COLORS.YELLOW}@nhcorrea${COLORS.RESET} (https://github.com/nhcorrea)`
   );
 }
 
@@ -91,9 +96,6 @@ program
       output: process.stdout,
     });
 
-    const baseColor = (text: string) =>
-      `${colors.bgWhite}${colors.black}${text}${colors.reset} `;
-
     const newCodeVersionQuestion = baseColor(
       `Digite o novo Version Code (Build Version) (atual: ${androidConfig.buildVersion}):`
     );
@@ -102,8 +104,49 @@ program
     );
 
     rl.question(newVersionNameQuestion, (newVersionName) => {
+      if (!newVersionName) {
+        console.error(
+          "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+        );
+
+        rl.close();
+        return;
+      }
+
+      if (!VERSION_SEMANTIC_REGEX.test(newVersionName)) {
+        console.error(
+          "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+        );
+        rl.close();
+        return;
+      }
+
       rl.question(newCodeVersionQuestion, (newVersionCode) => {
+        if (!newVersionCode) {
+          console.error(
+            "\nVocê deve inserir um valor para o Version Code (Build Version)"
+          );
+          rl.close();
+          return;
+        }
+
+        const versionCode = Number(newVersionCode);
+
+        if (
+          isNaN(versionCode) ||
+          versionCode < 0 ||
+          !Number.isInteger(versionCode)
+        ) {
+          console.error(
+            "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+          );
+
+          rl.close();
+          return;
+        }
+
         writeNewAndroidBuildGradle(newVersionCode, newVersionName);
+
         const _androidConfig = readAndroidBuildGradle();
 
         if (_androidConfig) {
@@ -137,32 +180,69 @@ program.command("ios <projectName>").action((projectName) => {
     output: process.stdout,
   });
 
-  rl.question(
-    "Digite o MARKETING_VERSION (Marketing Version) ",
-    (newMarketingVersion) => {
-      rl.question(
-        "Digite o CURRENT_PROJECT_VERSION (Build Version) ",
-        (newProjectVersion) => {
-          writeNewIOSVersion(
-            projectName,
-            newProjectVersion,
-            newMarketingVersion
-          );
-
-          const _iosConfig = readIOSConfig(projectName);
-
-          if (_iosConfig) {
-            const isFinish = true;
-            console.log("\n");
-            statusIOSVersion(_iosConfig, isFinish);
-            console.log("\n");
-          }
-
-          rl.close();
-        }
-      );
-    }
+  const newMarketingVersionQuestion = baseColor(
+    "Digite o MARKETING_VERSION (Marketing Version):"
   );
+  const newProjectVersionQuestion = baseColor(
+    "Digite o CURRENT_PROJECT_VERSION (Build Version):"
+  );
+
+  rl.question(newMarketingVersionQuestion, (newMarketingVersion) => {
+    if (!newMarketingVersion) {
+      console.error(
+        "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+      );
+
+      rl.close();
+      return;
+    }
+
+    if (!VERSION_SEMANTIC_REGEX.test(newMarketingVersion)) {
+      console.error(
+        "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+      );
+      rl.close();
+      return;
+    }
+
+    rl.question(newProjectVersionQuestion, (newProjectVersion) => {
+      if (!newProjectVersion) {
+        console.error(
+          "\nVocê deve inserir um valor para o Version Code (Build Version)"
+        );
+        rl.close();
+        return;
+      }
+
+      const versionCode = Number(newProjectVersion);
+
+      if (
+        isNaN(versionCode) ||
+        versionCode < 0 ||
+        !Number.isInteger(versionCode)
+      ) {
+        console.error(
+          "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+        );
+
+        rl.close();
+        return;
+      }
+
+      writeNewIOSVersion(projectName, newProjectVersion, newMarketingVersion);
+
+      const _iosConfig = readIOSConfig(projectName);
+
+      if (_iosConfig) {
+        const isFinish = true;
+        console.log("\n");
+        statusIOSVersion(_iosConfig, isFinish);
+        console.log("\n");
+      }
+
+      rl.close();
+    });
+  });
 });
 
 program.parse(process.argv);
