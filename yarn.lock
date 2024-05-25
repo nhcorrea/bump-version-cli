@@ -38,6 +38,8 @@ __metadata:
     commander: ^12.1.0
     figlet: ^1.7.0
     typescript: ^5.4.5
+  bin:
+    bump-version-cli: ./dist/index.js
   languageName: unknown
   linkType: soft
 
