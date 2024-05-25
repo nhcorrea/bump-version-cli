@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as readline from "readline";
 import figlet from "figlet";
 import { Command } from "commander";
