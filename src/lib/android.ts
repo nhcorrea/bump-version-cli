@@ -2,7 +2,7 @@ import * as fs from "fs";
 
 import { AndroidConfig } from "../types/types";
 import { ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS } from "../config/config";
-import { colors } from "../theme/colors";
+import { COLORS } from "../theme/colors";
 
 export function readAndroidBuildGradle(): AndroidConfig | null {
   try {
@@ -50,19 +50,19 @@ export function statusAndroidVersion(
   isFinish = false
 ) {
   const brightText = (text: string) =>
-    `${colors.black}${colors.bgWhite}${text}${colors.reset}`;
+    `${COLORS.BLACK}${COLORS.BG_WHITE}${text}${COLORS.RESET}`;
 
   const versionCodeStatus = brightText("Version Code (Build):");
   const versionNameStatus = brightText("Version Name (Marketing Version):");
 
-  const versionCode = `${colors.black}${colors.bgCyan}  ${androidConfig.buildVersion} ${colors.reset}`;
-  const versionName = `${colors.black}${colors.bgCyan}  ${androidConfig.marketingVersion} ${colors.reset}`;
+  const versionCode = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${androidConfig.buildVersion} ${COLORS.RESET}`;
+  const versionName = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${androidConfig.marketingVersion} ${COLORS.RESET}`;
 
   const headerText = isFinish
     ? "Versão do Android atualizada com sucesso!"
     : "Versão atual do Android:";
 
-  console.log(`\n${colors.black}${colors.bgCyan}${headerText}${colors.reset}`);
+  console.log(`\n${COLORS.BLACK}${COLORS.BG_CYAN}${headerText}${COLORS.RESET}`);
 
   console.log(`${versionNameStatus}${versionName}`);
   console.log(`${versionCodeStatus}${versionCode}`);

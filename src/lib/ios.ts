@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { IOSConfig } from "../types/types";
 import { IOS_PROJECT_PATH, IOS_PBXPROJ_PATH } from "../config/config";
-import { colors } from "../theme/colors";
+import { COLORS } from "../theme/colors";
 
 export function readIOSConfig(projectName: string): IOSConfig | null {
   try {
@@ -52,21 +52,21 @@ export function writeNewIOSVersion(
 
 export function statusIOSVersion(iosConfig: IOSConfig, isFinish = false) {
   const brightText = (text: string) =>
-    `${colors.black}${colors.bgWhite}${text}${colors.reset}`;
+    `${COLORS.BLACK}${COLORS.BG_WHITE}${text}${COLORS.RESET}`;
 
   const buildVersionStatus = brightText("Current Project Version (Build):");
   const marketingVersionStatus = brightText(
     "Marketing Version (Marketing Version):"
   );
 
-  const versionCode = `${colors.black}${colors.bgCyan}  ${iosConfig.CURRENT_PROJECT_VERSION} ${colors.reset}`;
-  const versionName = `${colors.black}${colors.bgCyan}  ${iosConfig.MARKETING_VERSION} ${colors.reset}`;
+  const versionCode = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${iosConfig.CURRENT_PROJECT_VERSION} ${COLORS.RESET}`;
+  const versionName = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${iosConfig.MARKETING_VERSION} ${COLORS.RESET}`;
 
   const headerText = isFinish
     ? "Versão do Android atualizada com sucesso!"
     : "Versão atual do App iOS:";
 
-  console.log(`\n${colors.black}${colors.bgCyan}${headerText}${colors.reset}`);
+  console.log(`\n${COLORS.BLACK}${COLORS.BG_CYAN}${headerText}${COLORS.RESET}`);
   console.log(`${buildVersionStatus}${versionName}`);
   console.log(`${marketingVersionStatus}${versionCode}`);
 }
