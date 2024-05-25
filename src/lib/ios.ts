@@ -9,7 +9,7 @@ export function readIOSConfig(projectName: string): IOSConfig | null {
     const file = fs.readFileSync(PROJECT_PATH, "utf8");
 
     const buildVersion = file.match(/CURRENT_PROJECT_VERSION = (\S+)/);
-    const marketingVersion = file.match(/MARKETING_VERSION = (\S+);/);
+    const marketingVersion = file.match(/MARKETING_VERSION = (\S+)/);
 
     const currentBuildVersion = buildVersion ? buildVersion[1] : null;
     const currentMarketingVersion = marketingVersion
@@ -63,7 +63,7 @@ export function statusIOSVersion(iosConfig: IOSConfig, isFinish = false) {
   const versionName = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${iosConfig.MARKETING_VERSION} ${COLORS.RESET}`;
 
   const headerText = isFinish
-    ? "Versão do Android atualizada com sucesso!"
+    ? "Versão do iOS atualizada com sucesso!"
     : "Versão atual do App iOS:";
 
   console.log(`\n${COLORS.BLACK}${COLORS.BG_CYAN}${headerText}${COLORS.RESET}`);
