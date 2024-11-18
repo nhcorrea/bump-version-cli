@@ -21,7 +21,7 @@ export function readAndroidBuildGradle(): AndroidConfig | null {
       marketingVersion,
     };
   } catch (e) {
-    console.error("Erro ao ler build.gradle", e);
+    console.error("Error reading build.gradle", e);
     return null;
   }
 }
@@ -41,7 +41,7 @@ export function writeNewAndroidBuildGradle(
 
     fs.writeFileSync(ANDROID_BUILD_GRADLE, file, ANDROID_ENCODE_OPTIONS);
   } catch (e) {
-    console.error("Erro ao atualizar a versão do Android:", e);
+    console.error("Error updating the Android version:", e);
   }
 }
 
@@ -59,8 +59,8 @@ export function statusAndroidVersion(
   const versionName = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${androidConfig.marketingVersion} ${COLORS.RESET}`;
 
   const headerText = isFinish
-    ? "Versão do Android atualizada com sucesso!"
-    : "Versão atual do Android:";
+    ? "Android version updated successfully!"
+    : "Current Android version:";
 
   console.log(`\n${COLORS.BLACK}${COLORS.BG_CYAN}${headerText}${COLORS.RESET}`);
 

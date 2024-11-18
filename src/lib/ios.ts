@@ -21,7 +21,7 @@ export function readIOSConfig(projectName: string): IOSConfig | null {
       MARKETING_VERSION: currentMarketingVersion,
     };
   } catch (e) {
-    console.error("Erro ao ler o arquivo project.pbxproj:", e);
+    console.error("Error reading the project.pbxproj file:", e);
     return null;
   }
 }
@@ -46,7 +46,7 @@ export function writeNewIOSVersion(
 
     fs.writeFileSync(FILE_PATH, file, "utf8");
   } catch (e) {
-    console.error("Erro ao atualizar a versão do iOS:", e);
+    console.error("Error updating the iOS version:", e);
   }
 }
 
@@ -63,8 +63,8 @@ export function statusIOSVersion(iosConfig: IOSConfig, isFinish = false) {
   const versionName = `${COLORS.BLACK}${COLORS.BG_CYAN}  ${iosConfig.MARKETING_VERSION} ${COLORS.RESET}`;
 
   const headerText = isFinish
-    ? "Versão do iOS atualizada com sucesso!"
-    : "Versão atual do App iOS:";
+    ? "iOS version updated successfully!"
+    : "Current iOS app version:";
 
   console.log(`\n${COLORS.BLACK}${COLORS.BG_CYAN}${headerText}${COLORS.RESET}`);
   console.log(`${buildVersionStatus}${versionName}`);

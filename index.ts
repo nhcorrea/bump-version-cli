@@ -43,14 +43,14 @@ const program = new Command();
 
 program
   .version(`@nhcorrea/bump-version-cli\nv${version}`)
-  .description("CLI para gerenciar versões do projeto");
+  .description("CLI to manage project versions");
 
 program.command("android-version").action(() => {
   const androidBuildGradle = readAndroidBuildGradle();
 
   if (!androidBuildGradle) {
     console.error(
-      "Erro ao ler build.gradle. Certifique-se de estar no diretório correto."
+      "Error reading build.gradle. Make sure you are in the correct directory."
     );
     return;
   }
@@ -65,7 +65,7 @@ program.command("ios-version <projectName>").action((projectName) => {
 
   if (!iosConfig) {
     console.error(
-      "Erro ao ler o arquivo project.pbxproj. Certifique-se de estar no diretório correto."
+      "Error reading the project.pbxproj file. Make sure you are in the correct directory."
     );
     return;
   }
@@ -77,14 +77,14 @@ program.command("ios-version <projectName>").action((projectName) => {
 
 program
   .command("android")
-  .description("Atualiza a versão do aplicativo Android")
-  .option("-v, --version", "Exibe a versão atual do Android")
+  .description("Updates the Android app version")
+  .option("-v, --version", "Displays the current Android version")
   .action(() => {
     const androidConfig = readAndroidBuildGradle();
 
     if (!androidConfig) {
       console.error(
-        "Erro ao ler build.gradle. Certifique-se de estar no diretório correto."
+        "Error reading build.gradle. Make sure you are in the correct directory."
       );
       return;
     }
@@ -99,25 +99,24 @@ program
     });
 
     const newCodeVersionQuestion = baseColor(
-      `Digite o novo Version Code (Build Version) (atual: ${androidConfig.buildVersion}):`
+      `Enter the new Version Code (Build Version) (current: ${androidConfig.buildVersion}):`
     );
     const newVersionNameQuestion = baseColor(
-      `Digite o novo Version Name (Marketing Version) (atual: ${androidConfig.marketingVersion}):`
+      `Enter the new Version Name (Marketing Version) (current: ${androidConfig.marketingVersion}):`
     );
 
     rl.question(newVersionNameQuestion, (newVersionName) => {
       if (!newVersionName) {
         console.error(
-          "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+          "\nThe Android version must follow the semantic versioning pattern (x.x.x)"
         );
-
         rl.close();
         return;
       }
 
       if (!VERSION_SEMANTIC_REGEX.test(newVersionName)) {
         console.error(
-          "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+          "\nThe Android version must follow the semantic versioning format (x.x.x)"
         );
         rl.close();
         return;
@@ -126,7 +125,7 @@ program
       rl.question(newCodeVersionQuestion, (newVersionCode) => {
         if (!newVersionCode) {
           console.error(
-            "\nVocê deve inserir um valor para o Version Code (Build Version)"
+            "\nYou must enter a value for the Version Code (Build Version)"
           );
           rl.close();
           return;
@@ -140,9 +139,8 @@ program
           !Number.isInteger(versionCode)
         ) {
           console.error(
-            "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+            "\nThe Version Code (Build Version) must be a positive integer"
           );
-
           rl.close();
           return;
         }
@@ -168,7 +166,7 @@ program.command("ios <projectName>").action((projectName) => {
 
   if (!iosConfig) {
     console.error(
-      "Erro ao ler o arquivo project.pbxproj. Certifique-se de estar no diretório correto."
+      "Error reading the project.pbxproj file. Make sure you are in the correct directory."
     );
     return;
   }
@@ -183,25 +181,24 @@ program.command("ios <projectName>").action((projectName) => {
   });
 
   const newMarketingVersionQuestion = baseColor(
-    "Digite o MARKETING_VERSION (Marketing Version):"
+    "Enter the MARKETING_VERSION (Marketing Version):"
   );
   const newProjectVersionQuestion = baseColor(
-    "Digite o CURRENT_PROJECT_VERSION (Build Version):"
+    "Enter the CURRENT_PROJECT_VERSION (Build Version):"
   );
 
   rl.question(newMarketingVersionQuestion, (newMarketingVersion) => {
     if (!newMarketingVersion) {
       console.error(
-        "\nVocê deve inserir um valor para o Version Name (Marketing Version)"
+        "\nYou must enter a value for the Version Name (Marketing Version)"
       );
-
       rl.close();
       return;
     }
 
     if (!VERSION_SEMANTIC_REGEX.test(newMarketingVersion)) {
       console.error(
-        "\nA versão do Android deve seguir o padrão semântico (x.x.x)"
+        "\nThe Android version must follow the semantic versioning pattern (x.x.x)"
       );
       rl.close();
       return;
@@ -210,7 +207,7 @@ program.command("ios <projectName>").action((projectName) => {
     rl.question(newProjectVersionQuestion, (newProjectVersion) => {
       if (!newProjectVersion) {
         console.error(
-          "\nVocê deve inserir um valor para o Version Code (Build Version)"
+          "\nYou must enter a value for the Version Code (Build Version)"
         );
         rl.close();
         return;
@@ -224,9 +221,8 @@ program.command("ios <projectName>").action((projectName) => {
         !Number.isInteger(versionCode)
       ) {
         console.error(
-          "\nO Version Code (Build Version) deve ser um número inteiro positivo"
+          "\nThe Version Code (Build Version) must be a positive integer"
         );
-
         rl.close();
         return;
       }
