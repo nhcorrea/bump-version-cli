@@ -2,7 +2,7 @@
   "name": "@nhcorrea/bump-version-cli",
   "version": "0.0.6",
   "description": "A CLI tool for easily bumping versions in mobile projects, compatible with React Native CLI, Expo Bare, Native Android and iOS.",
-  "packageManager": "yarn@3.8.2",
+  "packageManager": "yarn@3.8.6",
   "main": "dist/index.js",
   "files": [
     "dist"
