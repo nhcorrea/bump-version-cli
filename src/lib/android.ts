@@ -3,46 +3,151 @@ import * as fs from "fs";
 import { AndroidConfig } from "../types/types";
 import { ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS } from "../config/config";
 import { COLORS } from "../theme/colors";
+import { BumpVersionError } from "./errors";
 
-export function readAndroidBuildGradle(): AndroidConfig | null {
-  try {
-    const file = fs.readFileSync(ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS);
+export function parseAndroidBuildGradle(file: string): AndroidConfig {
+  const buildVersionMatch = file.match(
+    /versionCode(?:[ \t]*=[ \t]*|[ \t]+)(\d+)/
+  );
+  const marketingVersionMatch = file.match(
+    /versionName(?:[ \t]*=[ \t]*|[ \t]+)(["'])([^"'\r\n]+)\1/
+  );
 
-    const buildVersionMatch = file.match(/versionCode\s+(\d+)/);
-    const marketingVersionMatch = file.match(/versionName\s+"([^"]+)"/);
-
-    const buildVersion = buildVersionMatch ? buildVersionMatch[1] : null;
-    const marketingVersion = marketingVersionMatch
-      ? marketingVersionMatch[1]
-      : null;
-
-    return {
-      buildVersion,
-      marketingVersion,
-    };
-  } catch (e) {
-    console.error("Error reading build.gradle", e);
-    return null;
+  if (!buildVersionMatch || !marketingVersionMatch) {
+    throw new BumpVersionError(
+      "PARSE_ERROR",
+      "Could not find both versionCode and versionName assignments.",
+      ANDROID_BUILD_GRADLE
+    );
   }
+
+  return {
+    buildVersion: buildVersionMatch[1],
+    marketingVersion: marketingVersionMatch[2],
+  };
+}
+
+function readAndroidFile(): string {
+  try {
+    return fs.readFileSync(ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS);
+  } catch (error) {
+    const code =
+      error instanceof Error && "code" in error && error.code === "ENOENT"
+        ? "NOT_FOUND"
+        : "PARSE_ERROR";
+
+    throw new BumpVersionError(
+      code,
+      "Could not read the Android build.gradle file.",
+      ANDROID_BUILD_GRADLE,
+      error
+    );
+  }
+}
+
+export function readAndroidBuildGradle(): AndroidConfig {
+  return parseAndroidBuildGradle(readAndroidFile());
+}
+
+export function transformAndroidBuildGradle(
+  file: string,
+  newVersionCode: string,
+  newVersionName: string
+): string {
+  let buildMatches = 0;
+  let marketingMatches = 0;
+
+  const withBuildVersion = file.replace(
+    /(versionCode(?:[ \t]*=[ \t]*|[ \t]+))\d+/g,
+    (_match, prefix: string) => {
+      buildMatches += 1;
+      return `${prefix}${newVersionCode}`;
+    }
+  );
+
+  const transformed = withBuildVersion.replace(
+    /(versionName(?:[ \t]*=[ \t]*|[ \t]+))(["'])[^"'\r\n]*\2/g,
+    (_match, prefix: string, quote: string) => {
+      marketingMatches += 1;
+      return `${prefix}${quote}${newVersionName}${quote}`;
+    }
+  );
+
+  if (buildMatches === 0 || marketingMatches === 0) {
+    throw new BumpVersionError(
+      "PARSE_ERROR",
+      "No complete Android version assignment was found to update.",
+      ANDROID_BUILD_GRADLE
+    );
+  }
+
+  const result = parseAndroidBuildGradle(transformed);
+
+  if (
+    result.buildVersion !== newVersionCode ||
+    result.marketingVersion !== newVersionName
+  ) {
+    throw new BumpVersionError(
+      "VERIFY_ERROR",
+      "The transformed Android version does not match the requested values.",
+      ANDROID_BUILD_GRADLE
+    );
+  }
+
+  return transformed;
 }
 
 export function writeNewAndroidBuildGradle(
   newVersionCode: string,
   newVersionName: string
-) {
+): AndroidConfig {
+  const file = readAndroidFile();
+  const transformed = transformAndroidBuildGradle(
+    file,
+    newVersionCode,
+    newVersionName
+  );
+
   try {
-    let file = fs.readFileSync(ANDROID_BUILD_GRADLE, ANDROID_ENCODE_OPTIONS);
-
-    file = file.replace(/versionCode\s+\d+/g, `versionCode ${newVersionCode}`);
-    file = file.replace(
-      /versionName\s+"[^"]+"/g,
-      `versionName "${newVersionName}"`
+    fs.writeFileSync(
+      ANDROID_BUILD_GRADLE,
+      transformed,
+      ANDROID_ENCODE_OPTIONS
     );
-
-    fs.writeFileSync(ANDROID_BUILD_GRADLE, file, ANDROID_ENCODE_OPTIONS);
-  } catch (e) {
-    console.error("Error updating the Android version:", e);
+  } catch (error) {
+    throw new BumpVersionError(
+      "WRITE_ERROR",
+      "Could not write the Android build.gradle file.",
+      ANDROID_BUILD_GRADLE,
+      error
+    );
   }
+
+  let verified: AndroidConfig;
+
+  try {
+    verified = parseAndroidBuildGradle(readAndroidFile());
+  } catch (error) {
+    throw new BumpVersionError(
+      "VERIFY_ERROR",
+      "Could not verify the Android version after writing.",
+      ANDROID_BUILD_GRADLE,
+      error
+    );
+  }
+
+  if (
+    verified.buildVersion !== newVersionCode ||
+    verified.marketingVersion !== newVersionName
+  ) {
+    throw new BumpVersionError(
+      "VERIFY_ERROR",
+      "The Android file was written, but its final values do not match.",
+      ANDROID_BUILD_GRADLE
+    );
+  }
+
+  return verified;
 }
 
 export function statusAndroidVersion(

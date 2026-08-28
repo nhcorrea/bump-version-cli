@@ -16,11 +16,44 @@ import {
   statusIOSVersion,
   writeNewIOSVersion,
 } from "./src/lib/ios";
+import { isBumpVersionError } from "./src/lib/errors";
 
 const baseColor = (text: string) =>
   `${COLORS.BG_WHITE}${COLORS.BLACK}${text}${COLORS.RESET} `;
 
 const VERSION_SEMANTIC_REGEX = /^\d+\.\d+\.\d+$/;
+
+const EXIT_CODE = {
+  unexpected: 1,
+  validation: 2,
+  notFound: 3,
+  parse: 4,
+  write: 6,
+} as const;
+
+function handleCommandError(error: unknown) {
+  if (isBumpVersionError(error)) {
+    const exitCode =
+      error.code === "NOT_FOUND"
+        ? EXIT_CODE.notFound
+        : error.code === "PARSE_ERROR" || error.code === "AMBIGUOUS"
+        ? EXIT_CODE.parse
+        : EXIT_CODE.write;
+
+    console.error(`${error.code}: ${error.message} (${error.path})`);
+    process.exitCode = exitCode;
+    return;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`UNEXPECTED_ERROR: ${message}`);
+  process.exitCode = EXIT_CODE.unexpected;
+}
+
+function failValidation(message: string) {
+  console.error(message);
+  process.exitCode = EXIT_CODE.validation;
+}
 
 export function headerCLI() {
   const prettyLog = figlet.textSync("bump-version", {
@@ -46,33 +79,27 @@ program
   .description("CLI to manage project versions");
 
 program.command("android-version").action(() => {
-  const androidBuildGradle = readAndroidBuildGradle();
+  try {
+    const androidBuildGradle = readAndroidBuildGradle();
 
-  if (!androidBuildGradle) {
-    console.error(
-      "Error reading build.gradle. Make sure you are in the correct directory."
-    );
-    return;
+    console.clear();
+    headerCLI();
+    initAndroidLogs(androidBuildGradle);
+  } catch (error) {
+    handleCommandError(error);
   }
-
-  console.clear();
-  headerCLI();
-  initAndroidLogs(androidBuildGradle);
 });
 
 program.command("ios-version <projectName>").action((projectName) => {
-  const iosConfig = readIOSConfig(projectName);
+  try {
+    const iosConfig = readIOSConfig(projectName);
 
-  if (!iosConfig) {
-    console.error(
-      "Error reading the project.pbxproj file. Make sure you are in the correct directory."
-    );
-    return;
+    console.clear();
+    headerCLI();
+    initIOSLogs(iosConfig);
+  } catch (error) {
+    handleCommandError(error);
   }
-
-  console.clear();
-  headerCLI();
-  initIOSLogs(iosConfig);
 });
 
 program
@@ -80,12 +107,12 @@ program
   .description("Updates the Android app version")
   .option("-v, --version", "Displays the current Android version")
   .action(() => {
-    const androidConfig = readAndroidBuildGradle();
+    let androidConfig;
 
-    if (!androidConfig) {
-      console.error(
-        "Error reading build.gradle. Make sure you are in the correct directory."
-      );
+    try {
+      androidConfig = readAndroidBuildGradle();
+    } catch (error) {
+      handleCommandError(error);
       return;
     }
 
@@ -107,7 +134,7 @@ program
 
     rl.question(newVersionNameQuestion, (newVersionName) => {
       if (!newVersionName) {
-        console.error(
+        failValidation(
           "\nThe Android version must follow the semantic versioning pattern (x.x.x)"
         );
         rl.close();
@@ -115,7 +142,7 @@ program
       }
 
       if (!VERSION_SEMANTIC_REGEX.test(newVersionName)) {
-        console.error(
+        failValidation(
           "\nThe Android version must follow the semantic versioning format (x.x.x)"
         );
         rl.close();
@@ -124,7 +151,7 @@ program
 
       rl.question(newCodeVersionQuestion, (newVersionCode) => {
         if (!newVersionCode) {
-          console.error(
+          failValidation(
             "\nYou must enter a value for the Version Code (Build Version)"
           );
           rl.close();
@@ -135,25 +162,27 @@ program
 
         if (
           isNaN(versionCode) ||
-          versionCode < 0 ||
+          versionCode <= 0 ||
           !Number.isInteger(versionCode)
         ) {
-          console.error(
+          failValidation(
             "\nThe Version Code (Build Version) must be a positive integer"
           );
           rl.close();
           return;
         }
 
-        writeNewAndroidBuildGradle(newVersionCode, newVersionName);
-
-        const _androidConfig = readAndroidBuildGradle();
-
-        if (_androidConfig) {
+        try {
+          const updatedAndroidConfig = writeNewAndroidBuildGradle(
+            newVersionCode,
+            newVersionName
+          );
           const isFinish = true;
           console.log("\n");
-          statusAndroidVersion(_androidConfig, isFinish);
+          statusAndroidVersion(updatedAndroidConfig, isFinish);
           console.log("\n");
+        } catch (error) {
+          handleCommandError(error);
         }
 
         rl.close();
@@ -162,12 +191,12 @@ program
   });
 
 program.command("ios <projectName>").action((projectName) => {
-  const iosConfig = readIOSConfig(projectName);
+  let iosConfig;
 
-  if (!iosConfig) {
-    console.error(
-      "Error reading the project.pbxproj file. Make sure you are in the correct directory."
-    );
+  try {
+    iosConfig = readIOSConfig(projectName);
+  } catch (error) {
+    handleCommandError(error);
     return;
   }
 
@@ -189,7 +218,7 @@ program.command("ios <projectName>").action((projectName) => {
 
   rl.question(newMarketingVersionQuestion, (newMarketingVersion) => {
     if (!newMarketingVersion) {
-      console.error(
+      failValidation(
         "\nYou must enter a value for the Version Name (Marketing Version)"
       );
       rl.close();
@@ -197,8 +226,8 @@ program.command("ios <projectName>").action((projectName) => {
     }
 
     if (!VERSION_SEMANTIC_REGEX.test(newMarketingVersion)) {
-      console.error(
-        "\nThe Android version must follow the semantic versioning pattern (x.x.x)"
+      failValidation(
+        "\nThe iOS version must follow the semantic versioning pattern (x.x.x)"
       );
       rl.close();
       return;
@@ -206,7 +235,7 @@ program.command("ios <projectName>").action((projectName) => {
 
     rl.question(newProjectVersionQuestion, (newProjectVersion) => {
       if (!newProjectVersion) {
-        console.error(
+        failValidation(
           "\nYou must enter a value for the Version Code (Build Version)"
         );
         rl.close();
@@ -217,25 +246,28 @@ program.command("ios <projectName>").action((projectName) => {
 
       if (
         isNaN(versionCode) ||
-        versionCode < 0 ||
+        versionCode <= 0 ||
         !Number.isInteger(versionCode)
       ) {
-        console.error(
+        failValidation(
           "\nThe Version Code (Build Version) must be a positive integer"
         );
         rl.close();
         return;
       }
 
-      writeNewIOSVersion(projectName, newProjectVersion, newMarketingVersion);
-
-      const _iosConfig = readIOSConfig(projectName);
-
-      if (_iosConfig) {
+      try {
+        const updatedIOSConfig = writeNewIOSVersion(
+          projectName,
+          newProjectVersion,
+          newMarketingVersion
+        );
         const isFinish = true;
         console.log("\n");
-        statusIOSVersion(_iosConfig, isFinish);
+        statusIOSVersion(updatedIOSConfig, isFinish);
         console.log("\n");
+      } catch (error) {
+        handleCommandError(error);
       }
 
       rl.close();

@@ -15,3 +15,5 @@ node_modules
 android
 ios
 dist
+# Manter /docs comentado.
+/docs

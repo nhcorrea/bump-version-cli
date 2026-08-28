@@ -6,11 +6,11 @@ export type AndroidConfigFS =
   | BufferEncoding;
 
 export interface AndroidConfig {
-  buildVersion: string | null;
-  marketingVersion: string | null;
+  buildVersion: string;
+  marketingVersion: string;
 }
 
 export type IOSConfig = {
-  CURRENT_PROJECT_VERSION: string | null;
-  MARKETING_VERSION: string | null;
+  CURRENT_PROJECT_VERSION: string;
+  MARKETING_VERSION: string;
 };
