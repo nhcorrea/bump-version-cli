@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyRegistryVersionResult } from "./registry-version-result.mjs";
+import { spawnCommandSync } from "./spawn-command.mjs";
 
 if (process.argv.length > 2) {
   process.stderr.write(
@@ -26,7 +26,7 @@ if (process.argv.length > 2) {
     rmSync(temporaryRoot, { force: true, recursive: true });
   });
 
-  const result = spawnSync(
+  const result = spawnCommandSync(
     npmCommand,
     [
       "view",

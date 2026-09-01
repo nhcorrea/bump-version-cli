@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { spawnCommandSync } from "./spawn-command.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -27,7 +27,7 @@ if (installMode) {
   packArguments.push("--dry-run");
 }
 
-const pack = spawnSync(
+const pack = spawnCommandSync(
   npmCommand,
   packArguments,
   {
@@ -108,7 +108,7 @@ const smokes = [];
 if (installMode) {
   const consumerRoot = join(smokeRoot, "consumer");
   const tarballPath = join(smokeRoot, manifest.filename);
-  const install = spawnSync(
+  const install = spawnCommandSync(
     npmCommand,
     [
       "install",
@@ -150,7 +150,7 @@ if (installMode) {
     );
 
     smokes.push(
-      spawnSync(installedBin, ["--version"], {
+      spawnCommandSync(installedBin, ["--version"], {
         cwd: consumerRoot,
         encoding: "utf8",
       })
@@ -158,10 +158,14 @@ if (installMode) {
   }
 } else {
   smokes.push(
-    spawnSync(process.execPath, [join(repositoryRoot, primaryBin), "--version"], {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-    })
+    spawnCommandSync(
+      process.execPath,
+      [join(repositoryRoot, primaryBin), "--version"],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+      }
+    )
   );
 }
 

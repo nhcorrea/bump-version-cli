@@ -1,8 +1,8 @@
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnCommandSync } from "./spawn-command.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -30,7 +30,7 @@ if (!Number.isSafeInteger(iterations) || iterations < 5 || iterations > 200) {
 
 function runCli(args) {
   const started = process.hrtime.bigint();
-  const result = spawnSync(process.execPath, [cliPath, ...args], {
+  const result = spawnCommandSync(process.execPath, [cliPath, ...args], {
     cwd: repositoryRoot,
     encoding: "utf8",
     env: {
@@ -98,7 +98,7 @@ const inspect = measure(
     }
   }
 );
-const pack = spawnSync(
+const pack = spawnCommandSync(
   npmCommand,
   ["pack", "--json", "--dry-run", "--ignore-scripts"],
   {

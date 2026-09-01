@@ -16,6 +16,10 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import {
+  describeSpawnFailure,
+  resolveCommandInvocation,
+} from "../scripts/spawn-command.mjs";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(testDirectory, "..");
@@ -42,6 +46,39 @@ const { commitChangePlans } = require(
   join(repositoryRoot, "dist", "lib", "safe-write.js")
 );
 const { createProgram } = require(compiledCliPath);
+
+test("routes Windows command shims through cmd.exe", () => {
+  assert.deepEqual(
+    resolveCommandInvocation("yarn.cmd", ["--version"], {
+      platform: "win32",
+      commandShell: "C:\\Windows\\System32\\cmd.exe",
+    }),
+    {
+      command: "C:\\Windows\\System32\\cmd.exe",
+      args: ["/d", "/c", "yarn.cmd", "--version"],
+      usesCommandShell: true,
+    }
+  );
+});
+
+test("keeps native commands direct and reports spawn errors", () => {
+  assert.deepEqual(
+    resolveCommandInvocation("node", ["--version"], { platform: "linux" }),
+    {
+      command: "node",
+      args: ["--version"],
+      usesCommandShell: false,
+    }
+  );
+  assert.equal(
+    describeSpawnFailure({
+      error: new Error("spawn EINVAL"),
+      status: null,
+      signal: null,
+    }),
+    "spawn EINVAL"
+  );
+});
 
 function copyMobileFixtures(prefix) {
   const root = mkdtempSync(join(tmpdir(), prefix));

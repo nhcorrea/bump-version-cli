@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   constants,
@@ -15,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnCommandSync } from "./spawn-command.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -65,7 +65,7 @@ assert.equal(
 );
 
 if (!verifyOnly) {
-  const npmVersionResult = spawnSync(npmCommand, ["--version"], {
+  const npmVersionResult = spawnCommandSync(npmCommand, ["--version"], {
     cwd: repositoryRoot,
     encoding: "utf8",
   });
@@ -85,7 +85,7 @@ if (!verifyOnly) {
   );
 }
 
-const pack = spawnSync(
+const pack = spawnCommandSync(
   npmCommand,
   [
     "pack",

@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  describeSpawnFailure,
+  spawnCommandSync,
+} from "./spawn-command.mjs";
 import { compareVersionParts } from "./toolchain-version.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -20,7 +23,7 @@ assert.ok(engineMatch, "engines.node must use an exact >=major.minor.patch floor
 
 const expectedYarn = packageManagerMatch[1];
 const yarnCommand = process.platform === "win32" ? "yarn.cmd" : "yarn";
-const yarnVersionResult = spawnSync(yarnCommand, ["--version"], {
+const yarnVersionResult = spawnCommandSync(yarnCommand, ["--version"], {
   cwd: repositoryRoot,
   encoding: "utf8",
 });
@@ -28,7 +31,7 @@ const yarnVersionResult = spawnSync(yarnCommand, ["--version"], {
 assert.equal(
   yarnVersionResult.status,
   0,
-  `could not execute Yarn: ${yarnVersionResult.stderr || yarnVersionResult.stdout}`
+  `could not execute Yarn: ${describeSpawnFailure(yarnVersionResult)}`
 );
 
 const actualYarn = yarnVersionResult.stdout.trim();
