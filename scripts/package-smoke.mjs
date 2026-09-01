@@ -50,6 +50,24 @@ const [manifest] = JSON.parse(pack.stdout);
 assert.ok(manifest, "npm pack did not return a package manifest");
 assert.equal(manifest.name, packageJson.name);
 assert.equal(manifest.version, packageJson.version);
+assert.equal(packageJson.license, "MIT");
+assert.equal(packageJson.author, "Nathã Corrêa");
+assert.equal(packageJson.repository?.type, "git");
+assert.equal(
+  packageJson.repository?.url,
+  "git+https://github.com/nhcorrea/bump-version-cli.git"
+);
+assert.equal(
+  packageJson.homepage,
+  "https://github.com/nhcorrea/bump-version-cli#readme"
+);
+assert.equal(
+  packageJson.bugs?.url,
+  "https://github.com/nhcorrea/bump-version-cli/issues"
+);
+assert.equal(packageJson.publishConfig?.access, "public");
+assert.equal(packageJson.engines?.node, ">=22.12.0");
+assert.ok(packageJson.keywords?.includes("ci-cd"));
 
 const files = new Set(manifest.files.map(({ path }) => path));
 const binPaths =
@@ -65,13 +83,27 @@ for (const binPath of binPaths) {
   assert.ok(binContent.startsWith("#!/usr/bin/env node\n"), `${binPath} has no Node shebang`);
 }
 
+const mainPath = packageJson.main.replace(/^\.\//, "");
+assert.ok(files.has(mainPath), `main is missing from package: ${packageJson.main}`);
+assert.equal(mainPath, binPaths[0].replace(/^\.\//, ""));
+assert.ok(!files.has("dist/index.js"), "stale dist/index.js is present");
+
+const publishedJavaScript = [...files].filter(
+  (file) => file.startsWith("dist/") && file.endsWith(".js")
+);
+assert.deepEqual(
+  publishedJavaScript,
+  [mainPath],
+  "package must publish only the bundled CLI JavaScript"
+);
+
 for (const file of files) {
   assert.doesNotMatch(file, /^(?:docs|src|test|node_modules)\//);
   assert.notEqual(file, "index.ts");
 }
 
 const primaryBin = binPaths[0].replace(/^\.\//, "");
-let smoke;
+const smokes = [];
 
 if (installMode) {
   const consumerRoot = join(smokeRoot, "consumer");
@@ -104,38 +136,44 @@ if (installMode) {
     `tarball install failed:\n${install.stderr || install.stdout}`
   );
 
-  const binName =
+  const binNames =
     typeof packageJson.bin === "string"
-      ? packageJson.name.replace(/^@[^/]+\//, "")
-      : Object.keys(packageJson.bin)[0];
-  const installedBin = join(
-    consumerRoot,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? `${binName}.cmd` : binName
-  );
+      ? [packageJson.name.replace(/^@[^/]+\//, "")]
+      : Object.keys(packageJson.bin);
 
-  smoke = spawnSync(installedBin, ["--version"], {
-    cwd: consumerRoot,
-    encoding: "utf8",
-  });
+  for (const binName of binNames) {
+    const installedBin = join(
+      consumerRoot,
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? `${binName}.cmd` : binName
+    );
+
+    smokes.push(
+      spawnSync(installedBin, ["--version"], {
+        cwd: consumerRoot,
+        encoding: "utf8",
+      })
+    );
+  }
 } else {
-  smoke = spawnSync(
-    process.execPath,
-    [join(repositoryRoot, primaryBin), "--version"],
-    {
+  smokes.push(
+    spawnSync(process.execPath, [join(repositoryRoot, primaryBin), "--version"], {
       cwd: repositoryRoot,
       encoding: "utf8",
-    }
+    })
   );
 }
 
-assert.equal(
-  smoke.status,
-  0,
-  `packaged bin smoke failed:\n${smoke.stderr || smoke.stdout}`
-);
-assert.match(smoke.stdout, new RegExp(`v${packageJson.version.replaceAll(".", "\\.")}\\b`));
+for (const smoke of smokes) {
+  assert.equal(
+    smoke.status,
+    0,
+    `packaged bin smoke failed:\n${smoke.stderr || smoke.stdout}`
+  );
+  assert.equal(smoke.stderr, "");
+  assert.equal(smoke.stdout, `${packageJson.version}\n`);
+}
 
 process.stdout.write(
   `Package ${installMode ? "install " : ""}smoke OK: ${manifest.name}@${manifest.version}, ${manifest.entryCount} files, ${manifest.size} bytes\n`

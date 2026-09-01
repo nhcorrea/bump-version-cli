@@ -1,10 +1,3 @@
-export type AndroidConfigFS =
-  | {
-      encoding: BufferEncoding;
-      flag?: string | undefined;
-    }
-  | BufferEncoding;
-
 export interface AndroidConfig {
   buildVersion: string;
   marketingVersion: string;

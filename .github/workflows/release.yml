@@ -1,0 +1,77 @@
+name: Release package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify and publish npm package
+    if: github.repository == 'nhcorrea/bump-version-cli'
+    runs-on: ubuntu-latest
+    environment: npm
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Verify toolchain
+        run: |
+          npm --version
+          yarn toolchain:check
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Verify npm version is available
+        run: yarn release:availability
+
+      - name: Check project
+        run: yarn check
+        env:
+          CI: true
+
+      - name: Install and execute packed tarball
+        run: yarn package:install-smoke
+        env:
+          CI: true
+
+      - name: Enforce performance budgets
+        run: yarn benchmark --enforce
+        env:
+          CI: true
+
+      - name: Audit dependencies
+        run: yarn npm audit --all --recursive
+        env:
+          CI: true
+
+      - name: Prepare exact release artifact
+        run: yarn release:prepare
+        env:
+          CI: true
+
+      - name: Publish with trusted publishing
+        run: npm publish .release/package.tgz --ignore-scripts --access public --provenance
