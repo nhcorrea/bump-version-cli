@@ -1,0 +1,23 @@
+// !$*UTF8*$!
+{
+    objects = {
+        A100 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 41;
+                MARKETING_VERSION = 1.2.3;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Debug;
+        };
+        A200 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = "41";
+                MARKETING_VERSION = "1.2.3";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Release;
+        };
+    };
+}

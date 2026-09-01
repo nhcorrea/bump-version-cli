@@ -1,0 +1,12 @@
+// !$*UTF8*$!
+{
+    objects = {
+        A100 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            baseConfigurationReference = B100 /* Versions.xcconfig */;
+        };
+    };
+}

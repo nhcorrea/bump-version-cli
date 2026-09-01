@@ -1,0 +1,7 @@
+// !$*UTF8*$!
+{
+    buildSettings = {
+        CURRENT_PROJECT_VERSION = 41;
+        MARKETING_VERSION = 1.2.3;
+    };
+}

@@ -1,0 +1,97 @@
+// !$*UTF8*$!
+{
+    objects = {
+        A00000000000000000000001 /* App */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = A00000000000000000000010 /* Build configuration list for PBXNativeTarget "App" */;
+            name = App;
+        };
+        B00000000000000000000001 /* Widget */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = B00000000000000000000010 /* Build configuration list for PBXNativeTarget "Widget" */;
+            name = "Widget";
+        };
+        C00000000000000000000001 /* Project object */ = {
+            isa = PBXProject;
+            buildConfigurationList = C00000000000000000000010 /* Build configuration list for PBXProject "Targets" */;
+        };
+
+        A00000000000000000000011 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 41;
+                MARKETING_VERSION = 1.2.3;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Debug;
+        };
+        A00000000000000000000012 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = "41";
+                MARKETING_VERSION = "1.2.3";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Release;
+        };
+        B00000000000000000000011 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 7;
+                MARKETING_VERSION = 2.0.0;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Debug;
+        };
+        B00000000000000000000012 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 7;
+                MARKETING_VERSION = 2.0.0;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+            };
+            name = Release;
+        };
+        C00000000000000000000011 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 999;
+                MARKETING_VERSION = 9.9.9;
+            };
+            name = Debug;
+        };
+        C00000000000000000000012 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = 999;
+                MARKETING_VERSION = 9.9.9;
+            };
+            name = Release;
+        };
+
+        A00000000000000000000010 /* Build configuration list for PBXNativeTarget "App" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                A00000000000000000000011 /* Debug */,
+                A00000000000000000000012 /* Release */,
+            );
+            defaultConfigurationName = Release;
+        };
+        B00000000000000000000010 /* Build configuration list for PBXNativeTarget "Widget" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                B00000000000000000000011 /* Debug */,
+                B00000000000000000000012 /* Release */,
+            );
+            defaultConfigurationName = Release;
+        };
+        C00000000000000000000010 /* Build configuration list for PBXProject "Targets" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                C00000000000000000000011 /* Debug */,
+                C00000000000000000000012 /* Release */,
+            );
+            defaultConfigurationName = Release;
+        };
+    };
+}

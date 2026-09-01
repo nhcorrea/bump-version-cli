@@ -1,0 +1,7 @@
+android {
+    defaultConfig {
+        applicationId "com.example.fixture"
+        versionCode 41
+        versionName "1.2.3"
+    }
+}
