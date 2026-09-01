@@ -61,10 +61,23 @@ for (const workflowFile of workflowFiles) {
   }
 
   if (["audit.yml", "ci.yml", "release.yml"].includes(workflowFile)) {
+    const toolchainCheck = "node scripts/verify-toolchain.mjs";
+    const immutableInstall = "yarn install --immutable";
+    const toolchainCheckIndex = workflow.indexOf(toolchainCheck);
+    const immutableInstallIndex = workflow.indexOf(immutableInstall);
+
     assert.match(
       workflow,
-      /yarn toolchain:check/,
+      /node scripts\/verify-toolchain\.mjs/,
       `${workflowFile} must enforce the pinned Node/Yarn contract`
+    );
+    assert.ok(
+      immutableInstallIndex >= 0,
+      `${workflowFile} must install dependencies immutably`
+    );
+    assert.ok(
+      toolchainCheckIndex < immutableInstallIndex,
+      `${workflowFile} must verify the toolchain before installing dependencies`
     );
   }
 }

@@ -40,7 +40,7 @@ jobs:
       - name: Verify toolchain
         run: |
           npm --version
-          yarn toolchain:check
+          node scripts/verify-toolchain.mjs
 
       - name: Install dependencies
         run: yarn install --immutable
