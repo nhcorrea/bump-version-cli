@@ -45,6 +45,8 @@ function runCli(args, options = {}) {
     input: options.input,
     env: {
       ...process.env,
+      // Test cases opt into CI behavior explicitly through options.env.
+      CI: "false",
       NO_COLOR: "1",
       ...options.env,
     },
