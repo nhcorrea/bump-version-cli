@@ -10,8 +10,11 @@
 !.yarn/cache
 #.pnp.*
 
-.yarn
+/.yarn
 node_modules
-android
-ios
-dist
+.gradle/
+/android
+/ios
+/dist
+/.release
+/docs

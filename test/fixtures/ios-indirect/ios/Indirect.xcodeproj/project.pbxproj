@@ -1,0 +1,13 @@
+// !$*UTF8*$!
+{
+    objects = {
+        A100 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CURRENT_PROJECT_VERSION = "$(APP_BUILD_NUMBER)";
+                MARKETING_VERSION = "$(APP_MARKETING_VERSION)";
+            };
+            baseConfigurationReference = B100 /* Versions.xcconfig */;
+        };
+    };
+}
