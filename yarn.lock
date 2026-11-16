@@ -219,9 +219,9 @@ __metadata:
   linkType: hard
 
 "commander@npm:^15.0.0":
-  version: 15.0.0
-  resolution: "commander@npm:15.0.0"
-  checksum: e8aaa24591ae09389e83320431d47b44d9b03abe754586b689020b6bb6fc950a0089e9379099efa2e63b6b7c0e1e216bcf6b485754da7a54a74840077f3c6d2b
+  version: 15.1.0
+  resolution: "commander@npm:15.1.0"
+  checksum: 6d2cd36d30bfc9ade7672d0a28461fd8a96d6eb10c5beca550d3fb200509065b588797a1c098e18ecac0eb35cfc7acb6870a8cbe566e7d3d82db8d10f47f9144
   languageName: node
   linkType: hard
 
