@@ -142,27 +142,20 @@ pub fn write_output(host: &impl Host, root: &str, path: &str, document: &str) ->
     }
     Ok(())
 }
+fn read_config(host: &impl Host, root: &str, path: &str) -> Result<(String, Value)> {
+    let p = file(host, root, path)?;
+    let message = "Could not parse the automation configuration as JSON.";
+    let text = io(host, "read", &[&p], "PARSE_ERROR", message)?;
+    let doc = serde_json::from_str(&text).map_err(|_| error("PARSE_ERROR", message, &p))?;
+    Ok((p, doc))
+}
 pub fn config(host: &impl Host, root: &str, flags: &Value) -> Result<Value> {
     let path = flags["config"].as_str().unwrap_or(".bump-version.json");
     let p = absolute(host, root, path)?;
     let mut opts = json!({});
     if flags.get("config").is_some() || host.call("kind", &[&p]).as_deref().ok() != Some("missing")
     {
-        let p = file(host, root, path)?;
-        let text = io(
-            host,
-            "read",
-            &[&p],
-            "PARSE_ERROR",
-            "Could not parse the automation configuration as JSON.",
-        )?;
-        let doc: Value = serde_json::from_str(&text).map_err(|_| {
-            error(
-                "PARSE_ERROR",
-                "Could not parse the automation configuration as JSON.",
-                &p,
-            )
-        })?;
+        let (p, doc) = read_config(host, root, path)?;
         for (label, keys) in [
             (
                 "Configuration",
