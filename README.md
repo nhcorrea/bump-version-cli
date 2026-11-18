@@ -6,9 +6,8 @@ The CLI is non-interactive by default for its canonical commands, emits stable J
 
 ## Requirements
 
-- Node.js `>=22.12.0` (Node 22 and 24 are tested).
+- Node.js `>=22.12.0` and npm. The tarball includes the Rust engine as WebAssembly, ready to run in Node.
 - Android or iOS native project files matching the support matrix below.
-- No package manager requirement for consumers. Yarn 3.8.7 is used only to develop this repository.
 
 ## Install
 
@@ -16,7 +15,8 @@ Local development dependency (recommended for CI and reproducible projects):
 
 ```bash
 npm install --save-dev @nhcorrea/bump-version-cli
-npx bump-version --version
+npx --no-install bump-version --version
+npx --no-install bump-version-cli --version
 ```
 
 Global installation:
@@ -26,7 +26,13 @@ npm install --global @nhcorrea/bump-version-cli
 bump-version --version
 ```
 
-Both `bump-version` and the compatibility alias `bump-version-cli` execute the same binary.
+For a one-off invocation, name the scoped package explicitly:
+
+```bash
+npx --package @nhcorrea/bump-version-cli -- bump-version --version
+```
+
+Both aliases load the same package. Installation also works with npm lifecycle scripts disabled.
 
 ## Quick start
 
@@ -327,10 +333,13 @@ Legacy mutation commands fail fast in CI/`--non-interactive`. See the [v1 migrat
 
 ## Development
 
-This repository intentionally uses Yarn 3.8.7:
+Contributors use Node 26.13.1 LTS, Yarn 3.8.7 and rustup. The pinned Rust 1.100.0 toolchain includes the WebAssembly target, rustfmt and Clippy. Install a system linker for the native tests. From the repository root:
 
 ```bash
+npm install --global corepack@0.36.0
+corepack enable
 corepack yarn@3.8.7 install --immutable
+corepack yarn@3.8.7 build
 corepack yarn@3.8.7 check
 corepack yarn@3.8.7 benchmark
 corepack yarn@3.8.7 package:install-smoke
