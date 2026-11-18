@@ -1,5 +1,7 @@
 # Rust in the npm tarball
 
+This note records the distribution through round 2. The [round 3 validation](packaged-io-2026-11-18.md) covers the updated CLI and Wasm.
+
 Issue #15, T3. Node instantiates a single Rust WebAssembly module and supplies
 synchronous filesystem calls. The Brotli stream expands only in memory. The
 CommonJS entry retains Commander, the original prompts and the injectable
