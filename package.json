@@ -40,7 +40,7 @@
     "build": "node scripts/build.mjs",
     "toolchain:check": "node scripts/verify-toolchain.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "yarn build && node --test",
+    "test": "yarn build && cargo test --locked && node --test",
     "package:smoke": "yarn build && node scripts/package-smoke.mjs",
     "package:install-smoke": "yarn build && node scripts/package-smoke.mjs --install",
     "benchmark": "yarn build && node scripts/benchmark.mjs",
