@@ -1,7 +1,6 @@
 use bump_version::{
     Platform, Selection, Versions, android_code, automation,
     host::{Host, System},
-    project,
     transaction::{Plan, commit},
 };
 use serde_json::json;
@@ -272,6 +271,7 @@ fn restores_second_and_first_on_verification_or_commit_failure() {
 #[cfg(unix)]
 #[test]
 fn confines_input_and_output_symlinks_before_writes() {
+    use bump_version::project;
     use std::os::unix::fs::symlink;
     let (t, a, _) = setup();
     let outside = tempfile::tempdir().unwrap();
