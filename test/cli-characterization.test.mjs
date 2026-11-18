@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -16,7 +17,7 @@ import test from "node:test";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(testDirectory, "..");
-const cliPath = join(repositoryRoot, "dist", "cli.js");
+const cliPath = join(repositoryRoot, "dist", "package", "cli.js");
 const fixturesPath = join(testDirectory, "fixtures");
 const packageJson = JSON.parse(
   readFileSync(join(repositoryRoot, "package.json"), "utf8")
@@ -1213,4 +1214,118 @@ test("rejects an invalid automation config before writing", () => {
   assert.equal(document.error.code, "PARSE_ERROR");
   assert.match(document.error.message, /unknown keys/);
   assert.equal(readFileSync(projectPath, "utf8"), before);
+});
+
+test("an error report cannot replace another selected input or its configuration", () => {
+  const root = copyFixtures("android-groovy", "ios-basic");
+  for (const output of ["ios/Audit.xcodeproj/project.pbxproj", ".bump-version.json"]) {
+    writeFileSync(join(root, ".bump-version.json"), "{}\n");
+    const before = readFileSync(join(root, output));
+    const result = runCli(["set", "--root", root, "--format", "json", "--output-file", output]);
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    assert.equal(JSON.parse(result.stdout).error.code, "VALIDATION_ERROR");
+    assert.deepEqual(readFileSync(join(root, output)), before);
+  }
+});
+
+for (const [name, config, args, status, code] of [
+  ["malformed JSON", '{"platform":', [], 4, "PARSE_ERROR"],
+  ["invalid schema", '{"nope":1}', [], 4, "PARSE_ERROR"],
+  ["missing config", null, ["--config", "missing.json"], 3, "NOT_FOUND"],
+  [
+    "outside config",
+    null,
+    ["--config", "../outside.json"],
+    2,
+    "VALIDATION_ERROR",
+  ],
+]) {
+  test(`replaces a previous success report on ${name}`, (t) => {
+    const root = copyFixture("android-groovy");
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const report = join(root, "result.json");
+    const project = join(root, "android", "app", "build.gradle");
+    const before = readFileSync(project);
+    const flags = [
+      "--platform",
+      "android",
+      "--format",
+      "json",
+      "--output-file",
+      "result.json",
+    ];
+    const success = runCli(["inspect", ...flags], { cwd: root });
+    assert.equal(success.status, 0, success.stderr || success.stdout);
+    assert.equal(JSON.parse(readFileSync(report, "utf8")).ok, true);
+
+    if (config !== null)
+      writeFileSync(join(root, ".bump-version.json"), config);
+    const result = runCli(
+      [
+        "set",
+        "--version-name",
+        "2.0.0",
+        "--version-code",
+        "42",
+        ...flags,
+        ...args,
+      ],
+      { cwd: root },
+    );
+    assert.equal(result.status, status, result.stderr || result.stdout);
+    assert.equal(result.stderr, "");
+    const document = JSON.parse(result.stdout);
+    assert.equal(document.ok, false);
+    assert.equal(document.error.code, code);
+    assert.equal(readFileSync(report, "utf8"), result.stdout);
+    assert.deepEqual(readFileSync(project), before);
+  });
+}
+
+test("invalid configuration cannot turn a selected input into an error report", (t) => {
+  const root = copyFixture("android-groovy");
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const config = "custom.json";
+  const project = "custom-project.txt";
+  cpSync(join(root, "android", "app", "build.gradle"), join(root, project));
+  writeFileSync(
+    join(root, config),
+    JSON.stringify({ android: { file: project }, nope: 1 }),
+  );
+  for (const [target, args] of [
+    [project, ["--config", config]],
+    [config, ["--config", config]],
+    [project, ["--android-file", project, "--config", "missing.json"]],
+    ["android/app/build.gradle", ["--config", "../outside.json"]],
+  ]) {
+    const before = readFileSync(join(root, target));
+    const result = runCli(
+      ["inspect", "--format", "json", "--output-file", target, ...args],
+      { cwd: root },
+    );
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    assert.match(JSON.parse(result.stdout).error.message, /--output-file/);
+    assert.deepEqual(readFileSync(join(root, target)), before);
+  }
+});
+
+test("debug keeps error JSON on stdout and the same document in the output file", () => {
+  const root = copyFixture("android-groovy");
+  const result = runCli(["set", "--root", root, "--platform", "android", "--format", "json",
+    "--output-file", "result.json", "--debug"]);
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /BumpVersionError/);
+  const document = JSON.parse(result.stdout);
+  assert.equal(document.error.code, "VALIDATION_ERROR");
+  assert.deepEqual(JSON.parse(readFileSync(join(root, "result.json"), "utf8")), document);
+});
+
+test("usage errors respect JSON format and the validated report destination", () => {
+  const root = copyFixture("android-groovy");
+  const result = runCli(["inspect", "--root", root, "--format=json", "--output-file", "result.json", "--unknown"]);
+  assert.equal(result.status, 2);
+  assert.equal(result.stderr, "");
+  const document = JSON.parse(result.stdout);
+  assert.equal(document.error.details.path, "arguments");
+  assert.deepEqual(JSON.parse(readFileSync(join(root, "result.json"), "utf8")), document);
 });

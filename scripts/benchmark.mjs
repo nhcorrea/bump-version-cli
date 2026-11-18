@@ -6,7 +6,7 @@ import { spawnCommandSync } from "./spawn-command.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const cliPath = join(repositoryRoot, "dist", "cli.js");
+const cliPath = join(repositoryRoot, "dist", "package", "cli.js");
 const fixtureRoot = join(repositoryRoot, "test", "fixtures", "android-groovy");
 const packageJson = JSON.parse(
   readFileSync(join(repositoryRoot, "package.json"), "utf8")
@@ -123,7 +123,7 @@ const directRuntimeDependencies = Object.keys(
 const budgets = {
   versionP95Ms: 100,
   inspectP95Ms: 150,
-  unpackedBytes: 100_000,
+  unpackedBytes: 200_000,
   directRuntimeDependencies: 1,
 };
 const checks = {

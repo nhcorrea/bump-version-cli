@@ -1,3 +1,4 @@
+import { smokeTarball } from "./smoke-tarball.mjs";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -88,14 +89,10 @@ assert.ok(files.has(mainPath), `main is missing from package: ${packageJson.main
 assert.equal(mainPath, binPaths[0].replace(/^\.\//, ""));
 assert.ok(!files.has("dist/index.js"), "stale dist/index.js is present");
 
-const publishedJavaScript = [...files].filter(
-  (file) => file.startsWith("dist/") && file.endsWith(".js")
-);
-assert.deepEqual(
-  publishedJavaScript,
-  [mainPath],
-  "package must publish only the bundled CLI JavaScript"
-);
+const runtimeFiles = [...files].filter(file => file.startsWith("dist/")).sort();
+assert.deepEqual(runtimeFiles, [
+  mainPath, "dist/package/bump-version.wasm.br", "dist/package/RUST-NOTICES.txt",
+].sort(), "unexpected or missing runtime files");
 
 for (const file of files) {
   assert.doesNotMatch(file, /^(?:docs|src|test|node_modules)\//);
@@ -106,56 +103,7 @@ const primaryBin = binPaths[0].replace(/^\.\//, "");
 const smokes = [];
 
 if (installMode) {
-  const consumerRoot = join(smokeRoot, "consumer");
-  const tarballPath = join(smokeRoot, manifest.filename);
-  const install = spawnCommandSync(
-    npmCommand,
-    [
-      "install",
-      "--ignore-scripts",
-      "--no-audit",
-      "--no-fund",
-      "--no-save",
-      "--prefix",
-      consumerRoot,
-      tarballPath,
-    ],
-    {
-      cwd: smokeRoot,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        npm_config_cache: npmCache,
-      },
-    }
-  );
-
-  assert.equal(
-    install.status,
-    0,
-    `tarball install failed:\n${install.stderr || install.stdout}`
-  );
-
-  const binNames =
-    typeof packageJson.bin === "string"
-      ? [packageJson.name.replace(/^@[^/]+\//, "")]
-      : Object.keys(packageJson.bin);
-
-  for (const binName of binNames) {
-    const installedBin = join(
-      consumerRoot,
-      "node_modules",
-      ".bin",
-      process.platform === "win32" ? `${binName}.cmd` : binName
-    );
-
-    smokes.push(
-      spawnCommandSync(installedBin, ["--version"], {
-        cwd: consumerRoot,
-        encoding: "utf8",
-      })
-    );
-  }
+  smokeTarball(join(smokeRoot, manifest.filename), packageJson);
 } else {
   smokes.push(
     spawnCommandSync(

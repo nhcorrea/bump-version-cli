@@ -1,0 +1,10 @@
+name: Install Corepack for Node 26
+description: Put the pinned Corepack and its Yarn shim first on the job PATH
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        prefix="$RUNNER_TEMP/corepack"
+        npm install --prefix "$prefix" --no-save --no-package-lock --ignore-scripts corepack@0.36.0
+        echo "$prefix/node_modules/.bin" >> "$GITHUB_PATH"

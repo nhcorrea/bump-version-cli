@@ -1,3 +1,4 @@
+import { smokeTarball } from "./smoke-tarball.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
@@ -129,18 +130,17 @@ for (const binPath of binPaths) {
   assert.ok(files.has(binPath), `release package is missing bin: ${binPath}`);
 }
 
-const publishedJavaScript = [...files].filter(
-  (file) => file.startsWith("dist/") && file.endsWith(".js")
-);
-assert.deepEqual(
-  publishedJavaScript,
-  [mainPath],
-  "release package must contain only the bundled CLI JavaScript"
-);
+const runtimeFiles = [...files].filter(file => file.startsWith("dist/")).sort();
+assert.deepEqual(runtimeFiles, [
+  mainPath, "dist/package/bump-version.wasm.br", "dist/package/RUST-NOTICES.txt",
+].sort(), "unexpected or missing runtime files");
 
 const packedTarball = join(temporaryRoot, manifest.filename);
 const tarballBytes = readFileSync(packedTarball);
 const sha256 = createHash("sha256").update(tarballBytes).digest("hex");
+assert.equal(manifest.integrity, "sha512-" + createHash("sha512").update(tarballBytes).digest("base64"));
+assert.equal(manifest.shasum, createHash("sha1").update(tarballBytes).digest("hex"));
+smokeTarball(packedTarball, packageJson);
 const releaseManifest = {
   schemaVersion: 1,
   name: manifest.name,

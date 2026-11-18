@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Ported Android and iOS version planning, validation and transactional writes to Rust. The npm package includes the WebAssembly engine for both CLI aliases.
+- Development and release use Node 26.13.1 LTS. The consumer floor is Node 22.12.0.
+
 ## [1.0.0] - 2026-08-31
 
 ### Added

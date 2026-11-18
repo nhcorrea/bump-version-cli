@@ -4,25 +4,37 @@ Contributions are welcome. Keep changes small enough to review, preserve project
 
 ## Prerequisites
 
-- Node.js 22.12 or newer (Node 22 is the compile baseline; Node 24 is also tested).
-- Corepack.
-- Yarn exactly 3.8.7 for this repository.
+- Node.js 26.13.1 LTS for development, matching `.node-version`.
+- Corepack 0.36.0 and Yarn 3.8.7.
+- rustup and the system linker for your platform. Cargo reads `rust-toolchain.toml` and installs Rust 1.100.0, Clippy, rustfmt and `wasm32-unknown-unknown`. On Windows use the MSVC toolchain with Visual Studio C++ Build Tools.
 
-## Setup
+Consumers need Node.js 22.12.0 or newer and npm.
+
+## Build from a clean checkout
 
 ```bash
+npm install --global corepack@0.36.0
+corepack enable
+node scripts/verify-toolchain.mjs
 corepack yarn@3.8.7 install --immutable
+corepack yarn@3.8.7 build
+corepack yarn@3.8.7 typecheck
+cargo test --locked
+corepack yarn@3.8.7 test
 corepack yarn@3.8.7 check
+corepack yarn@3.8.7 package:install-smoke
+corepack yarn@3.8.7 benchmark --enforce
+corepack yarn@3.8.7 release:prepare --verify-only --tag v1.0.0
 ```
 
-Useful commands:
+Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package, including the compressed Wasm and license notices, must stay below 200,000 bytes and may have at most one direct npm runtime dependency. The [distribution note](docs/changes/wasm-distribution-2026-11-17.md) records the issue #15 measurements and platform results.
+
+To exercise a candidate tarball in a separate empty directory, pack it from the checkout, then pass its absolute path to npx:
 
 ```bash
-corepack yarn@3.8.7 typecheck
-corepack yarn@3.8.7 test
-corepack yarn@3.8.7 package:smoke
-corepack yarn@3.8.7 package:install-smoke
-corepack yarn@3.8.7 benchmark
+npm pack --ignore-scripts
+# From an empty directory, substitute the absolute path to the file just packed.
+npx --offline --yes --package /path/to/nhcorrea-bump-version-cli-1.0.0.tgz -- bump-version-cli --version
 ```
 
 ## Change rules
@@ -43,7 +55,7 @@ Every logical implementation change must include:
 
 ## Pull requests
 
-Include the problem, supported/unsupported behavior, tests, and package/benchmark impact. The CI matrix runs Node 22 and 24 on Linux, macOS, and Windows. A release-facing change must also pass the installed-tarball smoke.
+Include the problem, supported/unsupported behavior, tests, and package/benchmark impact. The CI matrix covers Node 22, 24 and 26 on Linux, macOS and Windows. Node 26 jobs also install and execute the candidate tarball. A release-facing change must also pass the installed-tarball smoke.
 
 Do not publish, tag, or push generated release commits from a pull request.
 
