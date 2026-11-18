@@ -302,7 +302,7 @@ function runAutomationCommand(runtime, command, options, usageError) {
     );
   } catch (error) {
     if (format === "json") {
-      const document = automationErrorDocument(command, error);
+      let document = automationErrorDocument(command, error);
       if (
         outputPath &&
         !(isBumpVersionError(error) && error.path === outputPath)
@@ -310,9 +310,9 @@ function runAutomationCommand(runtime, command, options, usageError) {
         try {
           writeOutput(document);
         } catch (outputError) {
-          if (options.debug) {
-            runtime.error(errorDebugText(outputError) ?? String(outputError));
-          }
+          if (options.debug) runtime.error(errorDebugText(error) ?? String(error));
+          error = outputError;
+          document = automationErrorDocument(command, error);
         }
       }
       runtime.log(JSON.stringify(document, null, 2));

@@ -106,20 +106,51 @@ pub fn output(host: &impl Host, root: &str, path: &str) -> Result<String> {
 /// path. Otherwise failure on Android could overwrite a still-unread iOS file.
 pub fn report_path(host: &impl Host, root: &str, path: &str, flags: &Value) -> Result<String> {
     let out = output(host, root, path)?;
+    let existing = io(
+        host,
+        "kind",
+        &[&out],
+        "WRITE_ERROR",
+        "Could not inspect --output-file.",
+    )? == "file";
+    let real = if existing {
+        io(
+            host,
+            "canonical",
+            &[&out],
+            "WRITE_ERROR",
+            "Could not resolve --output-file.",
+        )?
+    } else {
+        out.clone()
+    };
     let config_name = flags["config"].as_str().unwrap_or(".bump-version.json");
-    let config_path = absolute(host, root, config_name)?;
-    let real = host
-        .call("canonical", &[&out])
-        .unwrap_or_else(|_| out.clone());
-    if out == config_path || host.call("canonical", &[&config_path]).ok().as_ref() == Some(&real) {
+    if let Ok(config_path) = absolute(host, root, config_name)
+        && (out == config_path
+            || host.call("canonical", &[&config_path]).ok().as_ref() == Some(&real))
+    {
         return Err(error(
             "VALIDATION_ERROR",
             "--output-file must be distinct from the configuration file.",
             &out,
         ));
     }
-    if host.call("kind", &[&out]).as_deref().ok() == Some("file") {
-        let options = config(host, root, flags)?;
+    if existing {
+        // A config error belongs in a valid report. Use any readable path selectors
+        // for collision checks even if the rest of the config fails validation.
+        // The command itself still requires the complete config to be valid.
+        let mut options = flags.clone();
+        if let Ok((_, doc)) = read_config(host, root, config_name) {
+            for (flag, selector) in [
+                ("androidFile", &doc["android"]["file"]),
+                ("androidModule", &doc["android"]["module"]),
+                ("iosProject", &doc["ios"]["project"]),
+            ] {
+                if options.get(flag).is_none() && selector.as_str().is_some_and(|s| !s.is_empty()) {
+                    options[flag] = selector.clone();
+                }
+            }
+        }
         for p in [Platform::Android, Platform::Ios] {
             if find(host, root, p, &options).ok().as_ref() == Some(&real) {
                 return Err(error(
