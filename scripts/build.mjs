@@ -2,18 +2,32 @@ import { rustNotices } from "./rust-notices.mjs";
 import { spawnSync } from "node:child_process";
 import { brotliCompressSync } from "node:zlib";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const output = new URL("../dist/package/", import.meta.url);
 const target = "wasm32-unknown-unknown";
+// Rust panic locations can contain the absolute registry/checkout path.
+// Stable virtual roots keep the shipped bytes independent of the developer.
+const flags =
+  process.env.CARGO_ENCODED_RUSTFLAGS?.split("\x1f") ??
+  process.env.RUSTFLAGS?.split(/\s+/).filter(Boolean) ??
+  [];
+const cargoHome = resolve(process.env.CARGO_HOME ?? join(homedir(), ".cargo"));
+flags.push(
+  "--remap-path-prefix=" + resolve(root) + "=/bump-version",
+  "--remap-path-prefix=" + cargoHome + "=/cargo",
+);
 const cargo = spawnSync(
   "cargo",
-  ["build", "--release", "--locked", "--target", target],
+  ["build", "--release", "--locked", "--target-dir", "target", "--target", target],
   {
     cwd: root,
     stdio: "inherit",
+    env: { ...process.env, CARGO_ENCODED_RUSTFLAGS: flags.join("\x1f") },
   },
 );
 if (cargo.error) throw cargo.error;

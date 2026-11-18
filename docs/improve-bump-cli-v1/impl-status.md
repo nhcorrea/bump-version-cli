@@ -4,3 +4,4 @@
 - T2. Cargo parser, configuration, planning, commit and rollback tests passed alongside the baseline CLI characterization.
 - T3. Candidate installs and passes characterization on macOS. Size gate failed. Linux and Windows smoke are pending.
 - T4. Documented source build and npm/npx use, including current platform evidence and package measurements.
+- T3. Final artifact verification removes local build paths and checks the complete runtime file list.

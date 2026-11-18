@@ -89,21 +89,16 @@ assert.ok(files.has(mainPath), `main is missing from package: ${packageJson.main
 assert.equal(mainPath, binPaths[0].replace(/^\.\//, ""));
 assert.ok(!files.has("dist/index.js"), "stale dist/index.js is present");
 
-const publishedJavaScript = [...files].filter(
-  (file) => file.startsWith("dist/") && file.endsWith(".js")
-);
-assert.deepEqual(
-  publishedJavaScript,
-  [mainPath],
-  "package must publish only the bundled CLI JavaScript"
-);
+const runtimeFiles = [...files].filter(file => file.startsWith("dist/")).sort();
+assert.deepEqual(runtimeFiles, [
+  mainPath, "dist/package/bump-version.wasm.br", "dist/package/RUST-NOTICES.txt",
+].sort(), "unexpected or missing runtime files");
 
 for (const file of files) {
   assert.doesNotMatch(file, /^(?:docs|src|test|node_modules)\//);
   assert.notEqual(file, "index.ts");
 }
 
-assert.ok(files.has("dist/package/bump-version.wasm.br"), "Rust module missing");
 const primaryBin = binPaths[0].replace(/^\.\//, "");
 const smokes = [];
 

@@ -16,3 +16,8 @@ version p95 44.62 ms, inspect p95 54.93 ms, 184,962 unpacked bytes and zero
 runtime dependencies. The 100,000-byte limit fails and remains in force.
 Independent install smokes passed on Node 22.12.0, 22.23.2, 24.20.0 and
 26.13.1 on macOS. Linux and Windows results are pending.
+
+A second build verification found absolute Cargo registry paths in Rust panic
+locations. The build now maps local directories to virtual roots before
+compiling. The packed-file checks accept only the CLI, Rust module and notices
+under dist. The documentation note records the revised measurement.
