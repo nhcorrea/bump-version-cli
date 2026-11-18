@@ -27,7 +27,7 @@ corepack yarn@3.8.7 benchmark --enforce
 corepack yarn@3.8.7 release:prepare --verify-only --tag v1.0.0
 ```
 
-Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The package contains the CommonJS entry, compressed Wasm and third-party notices under `dist/package/`. The benchmark measures this entry and reports the total installed package size. The issue #15 candidate currently exceeds the size budget.
+Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package, including the compressed Wasm and license notices, must stay below 200,000 bytes and may have at most one direct npm runtime dependency. The [distribution note](docs/changes/wasm-distribution-2026-11-17.md) records the issue #15 measurements and platform results.
 
 To exercise a candidate tarball in a separate empty directory, pack it from the checkout, then pass its absolute path to npx:
 

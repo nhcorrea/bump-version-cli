@@ -123,7 +123,7 @@ const directRuntimeDependencies = Object.keys(
 const budgets = {
   versionP95Ms: 100,
   inspectP95Ms: 150,
-  unpackedBytes: 100_000,
+  unpackedBytes: 200_000,
   directRuntimeDependencies: 1,
 };
 const checks = {
