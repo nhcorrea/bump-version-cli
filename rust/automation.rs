@@ -239,3 +239,48 @@ pub fn run(host: &impl Host, command: &str, flags: &Value, cwd: &str) -> Result<
         json!({"command":command,"changed":plans.iter().any(Plan::changed),"dryRun":enabled("dryRun"),"root":root,"platforms":results,"warnings":[]}),
     )
 }
+
+/// Interactive commands retain their fixed legacy paths and bypass automation
+/// configuration. The parser, validation and transaction match canonical set.
+pub fn legacy(host: &impl Host, req: &Value) -> Result<Value> {
+    let cwd = req["cwd"].as_str().unwrap_or(".");
+    let root = project::root(host, cwd, ".")?;
+    let platform = if req["platform"] == "android" {
+        Platform::Android
+    } else {
+        Platform::Ios
+    };
+    let selector = match platform {
+        Platform::Android => json!({"androidFile":"android/app/build.gradle"}),
+        Platform::Ios => {
+            json!({"iosProject":format!("ios/{}.xcodeproj/project.pbxproj",req["name"].as_str().unwrap_or(""))})
+        }
+    };
+    let path = project::find(host, &root, platform, &selector)?;
+    let text = host
+        .call("read", &[&path])
+        .map_err(|e| error("PARSE_ERROR", e.to_string(), &path))?;
+    let selection = Selection::default();
+    let source = platform.analyze(&text, &path, &selection)?;
+    if req.get("marketing").is_none() {
+        return Ok(json!(source.current));
+    }
+    let desired = Versions {
+        build: req["build"].as_str().unwrap_or("").into(),
+        marketing: req["marketing"].as_str().unwrap_or("").into(),
+    };
+    let plan = Plan::new(
+        platform,
+        path,
+        selection,
+        text,
+        source,
+        desired,
+        req["allowDowngrade"] == true,
+    )?;
+    let result = json!({"platform":platform,"path":plan.path,"before":plan.original,"after":plan.requested,"matches":plan.matches(),"changed":plan.changed()});
+    if req["dryRun"] != true {
+        commit(host, &[plan])?;
+    }
+    Ok(result)
+}

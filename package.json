@@ -39,7 +39,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "toolchain:check": "node scripts/verify-toolchain.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "cargo check --locked --all-targets && cargo check --locked --target wasm32-unknown-unknown",
     "test": "yarn build && cargo test --locked && node --test",
     "package:smoke": "yarn build && node scripts/package-smoke.mjs",
     "package:install-smoke": "yarn build && node scripts/package-smoke.mjs --install",
@@ -47,16 +47,11 @@
     "workflows:check": "node scripts/validate-workflows.mjs",
     "release:availability": "node scripts/registry-version-check.mjs",
     "release:prepare": "node scripts/release-check.mjs",
-    "check": "yarn toolchain:check && yarn typecheck && yarn test && yarn package:smoke && yarn workflows:check",
+    "check": "yarn toolchain:check && yarn typecheck && cargo fmt --check && cargo clippy --locked --all-targets -- -D warnings && cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings && yarn test && yarn package:smoke && yarn workflows:check",
     "prepublishOnly": "yarn build"
   },
   "devDependencies": {
-    "@tsconfig/node22": "^22.0.6",
-    "@types/node": "^22.20.1",
-    "esbuild": "^0.28.2",
-    "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "esbuild": "^0.28.2"
   }
 }

@@ -60,26 +60,41 @@ fn graph(
         let open = cap.get(0).unwrap().end() - 1;
         let end = closing(pairs, open, "An iOS object block is not balanced.", path)?;
         let mut direct = String::new();
+        let mut structural = String::new();
         let mut start = open + 1;
         while let Some(nested) = lex.structure[start..end].find('{') {
             let pos = start + nested;
             direct.push_str(&lex.comments[start..pos]);
             direct.push(' ');
+            structural.push_str(&lex.structure[start..pos]);
+            structural.push(' ');
             start = pairs[&pos] + 1;
         }
         direct.push_str(&lex.comments[start..end]);
+        structural.push_str(&lex.structure[start..end]);
         let mut obj = Object {
             id: cap[1].into(),
             ..Default::default()
         };
-        for prop in pattern!(r"\b(isa|name|buildConfigurationList|baseConfigurationReference)[ \t]*=[ \t]*([^;\r\n]+);").captures_iter(&direct){
-            let value=decode(prop[2].trim());
-            match &prop[1]{"isa"=>obj.isa=value,"name"=>obj.name=value,"buildConfigurationList"=>obj.list=value,_=>obj.base=true}
+        let properties =
+            pattern!(r"\b(isa|name|buildConfigurationList|baseConfigurationReference)[ \t]*=");
+        for prop in properties.captures_iter(&structural) {
+            let start = prop.get(0).unwrap().end();
+            let Some(end) = structural[start..].find(';') else {
+                continue;
+            };
+            let value = decode(direct[start..start + end].trim());
+            match &prop[1] {
+                "isa" => obj.isa = value,
+                "name" => obj.name = value,
+                "buildConfigurationList" => obj.list = value,
+                _ => obj.base = true,
+            }
         }
         match obj.isa.as_str() {
             "XCConfigurationList" => {
                 let ids = pattern!(r"\bbuildConfigurations[ \t]*=[ \t]*\(([^)]*)\);")
-                    .captures(&direct)
+                    .captures(&structural)
                     .map(|cap| {
                         pattern!(r"\b[A-Za-z0-9]{4,32}\b")
                             .find_iter(&cap[1])

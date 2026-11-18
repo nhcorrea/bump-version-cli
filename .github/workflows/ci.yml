@@ -62,7 +62,7 @@ jobs:
           CI: true
 
       - name: Install and execute packed tarball
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.20.0'
+        if: matrix.node == '26.13.1'
         run: yarn package:install-smoke
         env:
           CI: true

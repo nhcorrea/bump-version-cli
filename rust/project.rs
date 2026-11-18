@@ -83,6 +83,13 @@ pub fn output(host: &impl Host, root: &str, path: &str) -> Result<String> {
         "The --output-file parent directory does not exist.",
     )?;
     relative(host, root, &real)?;
+    if host.call("kind", &[&real]).as_deref().ok() != Some("directory") {
+        return Err(error(
+            "NOT_FOUND",
+            "The --output-file parent is not a directory.",
+            &parent,
+        ));
+    }
     let kind = host
         .call("kind", &[&p])
         .map_err(|e| error("WRITE_ERROR", e.to_string(), &p))?;
@@ -94,6 +101,36 @@ pub fn output(host: &impl Host, root: &str, path: &str) -> Result<String> {
         ));
     }
     Ok(p)
+}
+/// Validate an existing report destination before enabling even the error-report
+/// path. Otherwise failure on Android could overwrite a still-unread iOS file.
+pub fn report_path(host: &impl Host, root: &str, path: &str, flags: &Value) -> Result<String> {
+    let out = output(host, root, path)?;
+    let config_name = flags["config"].as_str().unwrap_or(".bump-version.json");
+    let config_path = absolute(host, root, config_name)?;
+    let real = host
+        .call("canonical", &[&out])
+        .unwrap_or_else(|_| out.clone());
+    if out == config_path || host.call("canonical", &[&config_path]).ok().as_ref() == Some(&real) {
+        return Err(error(
+            "VALIDATION_ERROR",
+            "--output-file must be distinct from the configuration file.",
+            &out,
+        ));
+    }
+    if host.call("kind", &[&out]).as_deref().ok() == Some("file") {
+        let options = config(host, root, flags)?;
+        for p in [Platform::Android, Platform::Ios] {
+            if find(host, root, p, &options).ok().as_ref() == Some(&real) {
+                return Err(error(
+                    "VALIDATION_ERROR",
+                    "--output-file must be distinct from the project file.",
+                    &out,
+                ));
+            }
+        }
+    }
+    Ok(out)
 }
 pub fn write_output(host: &impl Host, root: &str, path: &str, document: &str) -> Result<()> {
     let p = output(host, root, path)?;

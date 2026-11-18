@@ -7,7 +7,10 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::{cell::RefCell, io};
-thread_local! {static INPUT:RefCell<Vec<u8>>=const{RefCell::new(Vec::new())};static OUTPUT:RefCell<Vec<u8>>=const{RefCell::new(Vec::new())};}
+thread_local! {
+    static INPUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+    static OUTPUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+}
 
 #[link(wasm_import_module = "os")]
 unsafe extern "C" {
@@ -41,7 +44,15 @@ fn request(bytes: &[u8]) -> Result<Value> {
     let req: Value = serde_json::from_slice(bytes)
         .map_err(|e| error("VALIDATION_ERROR", e.to_string(), "arguments"))?;
     let field = |k: &str| req[k].as_str().unwrap_or("");
+    if field("expectedVersion") != env!("CARGO_PKG_VERSION") {
+        return Err(error(
+            "VERIFY_ERROR",
+            "The Rust module and npm package versions differ.",
+            "package.json",
+        ));
+    }
     match field("operation") {
+        "legacy" => automation::legacy(&System, &req),
         "run" => automation::run(&System, field("command"), &req["options"], field("cwd")),
         "semantic" => {
             semantic(field("value"), field("platform"))?;
@@ -50,7 +61,12 @@ fn request(bytes: &[u8]) -> Result<Value> {
         "output" | "writeOutput" => {
             let root = project::root(&System, field("cwd"), req["root"].as_str().unwrap_or("."))?;
             if field("operation") == "output" {
-                Ok(json!(project::output(&System, &root, field("path"))?))
+                Ok(json!(project::report_path(
+                    &System,
+                    &root,
+                    field("path"),
+                    &req["options"]
+                )?))
             } else {
                 project::write_output(&System, &root, field("path"), field("document"))?;
                 Ok(Value::Null)

@@ -349,3 +349,25 @@ fn unwritable_directory_keeps_original_and_cleans_temps() {
     assert_eq!(fs::read_to_string(&a).unwrap(), ANDROID);
     clean(&a);
 }
+
+#[test]
+fn concurrent_edit_while_staging_survives_and_temporary_is_removed() {
+    struct EditAfterStage;
+    impl Host for EditAfterStage {
+        fn call(&self, op: &str, args: &[&str]) -> io::Result<String> {
+            let result = System.call(op, args)?;
+            if op == "stage" {
+                fs::write(args[0], "concurrent edit")?;
+            }
+            Ok(result)
+        }
+    }
+    let (_temp, android, _) = setup();
+    let p = plan(Platform::Android, &android, "42", "1.2.4", false).unwrap();
+    assert_eq!(
+        commit(&EditAfterStage, &[p]).unwrap_err().code,
+        "CONCURRENT_MODIFICATION"
+    );
+    assert_eq!(fs::read_to_string(&android).unwrap(), "concurrent edit");
+    clean(&android);
+}

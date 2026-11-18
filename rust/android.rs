@@ -39,7 +39,7 @@ fn direct(line: &str, field: &str, start: usize, kotlin: bool) -> Option<Range<u
         }
         rhs.strip_prefix(q)?.strip_suffix(q)?
     };
-    let offset = start + value.as_ptr() as usize - line.as_ptr() as usize;
+    let offset = start + (value.as_ptr() as usize - line.as_ptr() as usize);
     Some(offset..offset + value.len())
 }
 pub fn analyze(text: &str, path: &str) -> Result<Source> {

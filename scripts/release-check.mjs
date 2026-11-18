@@ -1,3 +1,4 @@
+import { smokeTarball } from "./smoke-tarball.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
@@ -141,6 +142,10 @@ assert.deepEqual(
 const packedTarball = join(temporaryRoot, manifest.filename);
 const tarballBytes = readFileSync(packedTarball);
 const sha256 = createHash("sha256").update(tarballBytes).digest("hex");
+assert.ok(files.has("dist/package/bump-version.wasm.br"), "Rust module missing");
+assert.equal(manifest.integrity, "sha512-" + createHash("sha512").update(tarballBytes).digest("base64"));
+assert.equal(manifest.shasum, createHash("sha1").update(tarballBytes).digest("hex"));
+smokeTarball(packedTarball, packageJson);
 const releaseManifest = {
   schemaVersion: 1,
   name: manifest.name,
