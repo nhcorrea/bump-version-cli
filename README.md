@@ -11,10 +11,12 @@ The CLI is non-interactive by default for its canonical commands, emits stable J
 
 ## Install
 
-Local development dependency (recommended for CI and reproducible projects):
+These commands install the 1.x CLI. To test an unpublished checkout, follow [Development](#development).
+
+Install it as a local development dependency for CI and reproducible projects.
 
 ```bash
-npm install --save-dev @nhcorrea/bump-version-cli
+npm install --save-dev @nhcorrea/bump-version-cli@1
 npx --no-install bump-version --version
 npx --no-install bump-version-cli --version
 ```
@@ -22,14 +24,14 @@ npx --no-install bump-version-cli --version
 Global installation:
 
 ```bash
-npm install --global @nhcorrea/bump-version-cli
+npm install --global @nhcorrea/bump-version-cli@1
 bump-version --version
 ```
 
 For a one-off invocation, name the scoped package explicitly:
 
 ```bash
-npx --package @nhcorrea/bump-version-cli -- bump-version --version
+npx --package @nhcorrea/bump-version-cli@1 -- bump-version --version
 ```
 
 Both aliases load the same package. Installation also works with npm lifecycle scripts disabled.
@@ -39,13 +41,13 @@ Both aliases load the same package. Installation also works with npm lifecycle s
 Inspect both native platforms:
 
 ```bash
-npx bump-version inspect --platform all
+npx --no-install bump-version inspect --platform all
 ```
 
 Plan an exact multi-platform update without writing:
 
 ```bash
-npx bump-version set \
+npx --no-install bump-version set \
   --platform all \
   --app-version 1.2.4 \
   --version-code 42 \
@@ -56,7 +58,7 @@ npx bump-version set \
 Apply the same change and emit JSON:
 
 ```bash
-npx bump-version set \
+npx --no-install bump-version set \
   --platform all \
   --app-version 1.2.4 \
   --version-code 42 \
@@ -68,7 +70,7 @@ npx bump-version set \
 Increment the patch version and both build numbers:
 
 ```bash
-npx bump-version bump \
+npx --no-install bump-version bump \
   --platform all \
   --release patch \
   --increment-build \
@@ -77,7 +79,7 @@ npx bump-version bump \
 
 ## Commands
 
-| Command | Purpose | Writes files |
+| Command | Purpose | Writes native project files |
 | --- | --- | --- |
 | `inspect` | Read current versions and source match counts | No |
 | `set` | Set exact marketing versions and build numbers | Yes, unless `--dry-run` |
@@ -133,7 +135,7 @@ Example GitHub Actions step that updates the working tree and archives a result:
   shell: bash
   run: |
     mkdir -p .artifacts
-    npx bump-version bump \
+    npx --no-install bump-version bump \
       --root . \
       --platform all \
       --release patch \
@@ -155,7 +157,7 @@ The CLI changes project files but does not commit, tag, push, or publish. Keep t
 Validate a release version without writing:
 
 ```bash
-npx bump-version check \
+npx --no-install bump-version check \
   --platform all \
   --app-version "$RELEASE_VERSION" \
   --format json
@@ -273,7 +275,7 @@ Preservation includes whitespace, comments, quote style, semicolons, CRLF/LF, un
 A project with more than one `PBXNativeTarget` is ambiguous by default. Select one target and, optionally, one configuration:
 
 ```bash
-npx bump-version inspect \
+npx --no-install bump-version inspect \
   --platform ios \
   --ios-project App \
   --ios-target App \
@@ -284,7 +286,7 @@ npx bump-version inspect \
 To update every native target, opt in explicitly:
 
 ```bash
-npx bump-version set \
+npx --no-install bump-version set \
   --platform ios \
   --all-targets \
   --marketing-version 1.2.4 \
@@ -303,20 +305,13 @@ All selected target/configuration blocks must contain one direct pair and share 
 - Expo managed/dynamic app config as a version source;
 - EAS remote app version source.
 
-These cases fail with exit `4` instead of overwriting an indirect or ambiguous source. Pass an explicit native file/project only when its contents themselves match the supported policy.
+An unsupported or ambiguous native file returns exit `4`. A missing native project or file returns exit `3`. The CLI reads local native files and has no integration with Expo app config or the EAS remote version service.
 
 ## Write safety
 
-Every mutation follows read-plan-compare-write-verify:
+The CLI builds and validates a plan for every selected platform before writing. For each changed file, it stages the new content in the same directory, preserves the file mode, and compares the target with the original content immediately before the atomic rename. It reads the result back and verifies the version fields. If a write or verification fails, it attempts to restore the files already replaced and reports any rollback failure.
 
-1. read bytes, mode, values, match counts, and SHA-256;
-2. validate all selected platforms and build a deterministic `ChangePlan`;
-3. recheck the original hash immediately before commit;
-4. write a temporary file in the same directory and preserve mode;
-5. atomically rename and parse/read back the result;
-6. rollback already-applied files if a later target fails.
-
-`--dry-run` uses the exact same plan but never opens the target for writing. A no-op does not change bytes or mtime.
+`--dry-run` uses the same plan and leaves native project files untouched. A no-op preserves their bytes and mtime. Passing `--output-file` also writes a JSON report, including during a dry run.
 
 ## Legacy commands
 
@@ -329,23 +324,24 @@ The interactive commands remain as deprecated transition aliases:
 | `android` | `set --platform android` with explicit flags |
 | `ios <project>` | `set --platform ios --ios-project <project>` with explicit flags |
 
-Legacy mutation commands fail fast in CI/`--non-interactive`. See the [v1 migration guide](docs/improve-bump-cli-v1/migration-guide.md).
+Legacy mutation commands fail fast in CI/`--non-interactive`. When migrating a script to `set`, supply the marketing version and the build number for each selected platform. Use `--dry-run` to preview the change.
 
 ## Development
 
-Contributors use Node 26.13.1 LTS, Yarn 3.8.7 and rustup. The pinned Rust 1.100.0 toolchain includes the WebAssembly target, rustfmt and Clippy. Install a system linker for the native tests. From the repository root:
+To build from a checkout, use Node 26.13.1 LTS, rustup and a system linker. The repository pins Yarn 3.8.7 and Rust 1.100.0 with the WebAssembly target, rustfmt and Clippy. Run these commands from the repository root.
 
 ```bash
 npm install --global corepack@0.36.0
 corepack enable
-corepack yarn@3.8.7 install --immutable
-corepack yarn@3.8.7 build
-corepack yarn@3.8.7 check
-corepack yarn@3.8.7 benchmark
-corepack yarn@3.8.7 package:install-smoke
+yarn install --immutable
+yarn build
+node dist/package/cli.js inspect --root test/fixtures/android-groovy --platform android
+node dist/package/cli.js bump --root test/fixtures/android-groovy --platform android --release patch --increment-build --dry-run
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [CHANGELOG.md](CHANGELOG.md), and [SECURITY.md](SECURITY.md). Maintainers should follow the [release runbook](docs/improve-bump-cli-v1/release-runbook.md); publishing is intentionally restricted to the protected tag workflow.
+The dry run should show `versionName` going from `1.2.3` to `1.2.4` and `versionCode` from `41` to `42`. To try your own project, pass its directory to `--root` and select the appropriate platform.
+
+Run `yarn check` for the Rust and Node test suites, then `yarn package:install-smoke` to install and execute the candidate tarball offline under both CLI names. Maintainers publish by pushing a tag matching the package version. See the [release instructions](https://github.com/nhcorrea/bump-version-cli/blob/main/CONTRIBUTING.md#releases), [changelog](https://github.com/nhcorrea/bump-version-cli/blob/main/CHANGELOG.md) and [security policy](https://github.com/nhcorrea/bump-version-cli/blob/main/SECURITY.md).
 
 ## License
 

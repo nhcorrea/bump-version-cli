@@ -6,7 +6,7 @@ Contributions are welcome. Keep changes small enough to review, preserve project
 
 - Node.js 26.13.1 LTS for development, matching `.node-version`.
 - Corepack 0.36.0 and Yarn 3.8.7.
-- rustup and the system linker for your platform. Cargo reads `rust-toolchain.toml` and installs Rust 1.100.0, Clippy, rustfmt and `wasm32-unknown-unknown`. On Windows use the MSVC toolchain with Visual Studio C++ Build Tools.
+- rustup and the system linker for your platform. When you run Cargo from the checkout, rustup reads `rust-toolchain.toml` and installs Rust 1.100.0, Clippy, rustfmt and `wasm32-unknown-unknown`. On Windows use the MSVC toolchain with Visual Studio C++ Build Tools.
 
 Consumers need Node.js 22.12.0 or newer and npm.
 
@@ -15,26 +15,19 @@ Consumers need Node.js 22.12.0 or newer and npm.
 ```bash
 npm install --global corepack@0.36.0
 corepack enable
-node scripts/verify-toolchain.mjs
-corepack yarn@3.8.7 install --immutable
-corepack yarn@3.8.7 build
-corepack yarn@3.8.7 typecheck
-cargo test --locked
-corepack yarn@3.8.7 test
-corepack yarn@3.8.7 check
-corepack yarn@3.8.7 package:install-smoke
-corepack yarn@3.8.7 benchmark --enforce
-corepack yarn@3.8.7 release:prepare --verify-only --tag v1.0.0
+yarn install --immutable
+yarn check
+yarn package:install-smoke
 ```
 
-Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package, including the compressed Wasm and license notices, must stay below 200,000 bytes and may have at most one direct npm runtime dependency. The [distribution note](docs/changes/wasm-distribution-2026-11-17.md) records the issue #15 measurements and platform results.
+Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package, including the compressed Wasm and license notices, must stay below 200,000 bytes and may have at most one direct npm runtime dependency. See the [package measurements](docs/changes/packaged-io-2026-11-18.md) and [hosted CI results](docs/changes/windows-ci-toolchain-2026-11-18.md).
 
-To exercise a candidate tarball in a separate empty directory, pack it from the checkout, then pass its absolute path to npx:
+After building, try the candidate as a consumer from an empty directory. These shell commands pack the checkout and run its tarball offline.
 
 ```bash
-npm pack --ignore-scripts
-# From an empty directory, substitute the absolute path to the file just packed.
-npx --offline --yes --package /path/to/nhcorrea-bump-version-cli-1.0.0.tgz -- bump-version-cli --version
+consumer=$(mktemp -d)
+archive=$(npm pack --silent --ignore-scripts --pack-destination "$consumer")
+(cd "$consumer" && npx --offline --yes --package "./$archive" -- bump-version-cli --version)
 ```
 
 ## Change rules
@@ -61,4 +54,25 @@ Do not publish, tag, or push generated release commits from a pull request.
 
 ## Releases
 
-Publishing is performed only by the protected `release.yml` tag workflow with npm trusted publishing. Do not add an npm write token or run `yarn npm publish` manually. Follow the [release runbook](docs/improve-bump-cli-v1/release-runbook.md) for prerequisites, gates, tag rules, and recovery.
+The [release workflow](.github/workflows/release.yml) publishes the verified tarball to npm when a matching `v*` tag is pushed. A merge to `main` runs CI.
+
+1. In the npm package settings, confirm the GitHub Actions trusted publisher for owner `nhcorrea`, repository `bump-version-cli`, workflow filename `release.yml` and environment `npm`. Allow direct publishing with `npm publish`. [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
+2. In GitHub Settings → Environments, configure the `npm` environment to allow release tags matching `v*` if you want to enforce that restriction. GitHub creates a missing environment on its first run with no protection rules. [GitHub deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+3. Confirm the version in `package.json` and date its entry in `CHANGELOG.md` when cutting the release. Run the clean-checkout checks above, then the following preflight from the repository root.
+
+```bash
+release_tag="v$(node -p "require('./package.json').version")"
+yarn release:availability
+yarn benchmark --enforce
+yarn npm audit --all --recursive
+yarn release:prepare --verify-only --tag "$release_tag"
+```
+
+Once the release changes are on `main` and CI has passed for the intended commit, tag that commit from a clean checkout. Pushing the tag starts publication.
+
+```bash
+git tag -a "$release_tag" -m "Release $release_tag"
+git push origin "refs/tags/$release_tag"
+```
+
+Check the **Release package** run in GitHub Actions, then verify the published version with `npm view @nhcorrea/bump-version-cli@latest version`. If the workflow fails, check that version on npm before retrying. A published version is immutable.
