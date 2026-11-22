@@ -1,7 +1,7 @@
 {
   "name": "@nhcorrea/bump-version-cli",
   "version": "1.0.0",
-  "description": "A CLI tool for easily bumping versions in mobile projects, compatible with React Native CLI, Expo Bare, Native Android and iOS.",
+  "description": "Fast Rust/Wasm CLI to inspect, validate, set, and bump Android and iOS app versions in CI/CD, React Native CLI, Expo Bare, Gradle, and Xcode projects.",
   "license": "MIT",
   "author": "Nathã Corrêa",
   "repository": {
@@ -15,11 +15,23 @@
   "keywords": [
     "cli",
     "version",
+    "bump-version",
+    "semver",
     "android",
     "ios",
+    "gradle",
+    "xcode",
+    "pbxproj",
+    "versioncode",
+    "marketing-version",
     "react-native",
     "expo",
-    "ci-cd"
+    "mobile",
+    "ci-cd",
+    "github-actions",
+    "release-automation",
+    "rust",
+    "wasm"
   ],
   "publishConfig": {
     "access": "public"

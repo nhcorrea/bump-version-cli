@@ -29,7 +29,7 @@ const repositoryRoot = resolve(testDirectory, "..");
 const repoUrl = "https://github.com/nhcorrea/bump-version-cli";
 
 function git(cwd, args) {
-  return execFileSync("git", args, {
+  return execFileSync("git", ["-c", "core.autocrlf=false", ...args], {
     cwd,
     encoding: "utf8",
     env: {
@@ -190,7 +190,7 @@ test("updates package.json, Cargo.toml, Cargo.lock, and CHANGELOG.md cleanly and
   assert.equal(JSON.parse(nextPkg).version, "1.1.0");
 
   const nextCargoToml = updateCargoTomlVersion(cargoToml, "1.1.0");
-  assert.match(nextCargoToml, /^version = "1\.1\.0"$/m);
+  assert.match(nextCargoToml, /^version = "1\.1\.0"\r?$/m);
 
   const nextCargoLock = updateCargoLockVersion(
     cargoLock,
@@ -199,9 +199,20 @@ test("updates package.json, Cargo.toml, Cargo.lock, and CHANGELOG.md cleanly and
   );
   assert.match(
     nextCargoLock,
-    /\[\[package\]\]\nname = "bump-version"\nversion = "1\.1\.0"\ndependencies = \[/
+    /\[\[package\]\]\r?\nname = "bump-version"\r?\nversion = "1\.1\.0"\r?\ndependencies = \[/
   );
-  assert.match(nextCargoLock, /name = "serde"\nversion = "/);
+  assert.match(nextCargoLock, /name = "serde"\r?\nversion = "/);
+
+  const crlfCargoLock = cargoLock.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n");
+  const nextCrlfCargoLock = updateCargoLockVersion(
+    crlfCargoLock,
+    "bump-version",
+    "1.1.0"
+  );
+  assert.match(
+    nextCrlfCargoLock,
+    /\[\[package\]\]\r\nname = "bump-version"\r\nversion = "1\.1\.0"\r\ndependencies = \[/
+  );
 
   const notes = formatReleaseNotes(
     [
@@ -222,7 +233,7 @@ test("updates package.json, Cargo.toml, Cargo.lock, and CHANGELOG.md cleanly and
 
   assert.match(
     nextChangelog,
-    /## \[Unreleased\]\n\n## \[1\.1\.0\] - 2026-11-22\n\n### Features/
+    /## \[Unreleased\]\r?\n\r?\n## \[1\.1\.0\] - 2026-11-22\r?\n\r?\n### Features/
   );
   assert.match(
     nextChangelog,
@@ -329,11 +340,11 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
     );
     assert.match(
       readFileSync(join(tempRoot, "Cargo.toml"), "utf8"),
-      /^version = "1\.0\.1"$/m
+      /^version = "1\.0\.1"\r?$/m
     );
     assert.match(
       readFileSync(join(tempRoot, "Cargo.lock"), "utf8"),
-      /name = "bump-version"\nversion = "1\.0\.1"/
+      /name = "bump-version"\r?\nversion = "1\.0\.1"/
     );
     assert.match(
       readFileSync(join(tempRoot, "CHANGELOG.md"), "utf8"),
