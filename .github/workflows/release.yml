@@ -1,30 +1,86 @@
 name: Release package
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
+  plan:
+    name: Plan release from conventional commits
+    if: >-
+      github.repository == 'nhcorrea/bump-version-cli' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      should_release: ${{ steps.plan.outputs.should_release }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      bump: ${{ steps.plan.outputs.bump }}
+      previous_tag: ${{ steps.plan.outputs.previous_tag }}
+      commit_sha: ${{ steps.plan.outputs.commit_sha }}
+
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - name: Fetch latest main and release tags
+        env:
+          RELEASE_GIT_TOKEN: ${{ github.token }}
+        run: |
+          git -c credential.helper= \
+            -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${RELEASE_GIT_TOKEN}"; }; f' \
+            fetch origin +refs/heads/main:refs/remotes/origin/main --tags
+
+      - name: Compute release plan
+        id: plan
+        run: node scripts/release-plan.mjs --verify-head-matches origin/main --github-output "$GITHUB_OUTPUT"
+
   publish:
-    name: Verify and publish npm package
-    if: github.repository == 'nhcorrea/bump-version-cli'
+    name: Verify, release and publish npm package
+    needs: plan
+    if: needs.plan.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     environment: npm
     timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
-      - name: Checkout
+      - name: Checkout planned commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.plan.outputs.commit_sha }}
+          fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
 
       - name: Setup Node
@@ -47,6 +103,24 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --immutable
+
+      - name: Generate release notes
+        env:
+          PLANNED_VERSION: ${{ needs.plan.outputs.version }}
+        run: >-
+          node scripts/release-plan.mjs
+          --expected-version "$PLANNED_VERSION"
+          --notes-file "${RUNNER_TEMP}/release-notes.md"
+
+      - name: Synchronize release versions and changelog
+        env:
+          PLANNED_VERSION: ${{ needs.plan.outputs.version }}
+          PREVIOUS_TAG: ${{ needs.plan.outputs.previous_tag }}
+        run: >-
+          node scripts/release-sync.mjs
+          --version "$PLANNED_VERSION"
+          --previous-tag "$PREVIOUS_TAG"
+          --notes-file "${RUNNER_TEMP}/release-notes.md"
 
       - name: Verify npm version is available
         run: yarn release:availability
@@ -72,9 +146,42 @@ jobs:
           CI: true
 
       - name: Prepare exact release artifact
-        run: yarn release:prepare
+        run: yarn release:prepare --tag "$RELEASE_TAG"
         env:
           CI: true
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+
+      - name: Commit and push release metadata
+        env:
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          RELEASE_GIT_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          if [ -n "$(git status --porcelain -- package.json Cargo.toml Cargo.lock CHANGELOG.md)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- package.json Cargo.toml Cargo.lock CHANGELOG.md
+            git commit -m "chore(release): ${RELEASE_TAG} [skip ci]"
+            git -c credential.helper= \
+              -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${RELEASE_GIT_TOKEN}"; }; f' \
+              push origin HEAD:refs/heads/main
+          fi
 
       - name: Publish with trusted publishing
         run: npm publish .release/package.tgz --ignore-scripts --access public --provenance
+
+      - name: Tag and create GitHub Release
+        env:
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          RELEASE_GIT_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+          git -c credential.helper= \
+            -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${RELEASE_GIT_TOKEN}"; }; f' \
+            push origin "refs/tags/${RELEASE_TAG}"
+          gh release create "${RELEASE_TAG}" .release/manifest.json \
+            --title "${RELEASE_TAG}" \
+            --notes-file "${RUNNER_TEMP}/release-notes.md" \
+            --verify-tag

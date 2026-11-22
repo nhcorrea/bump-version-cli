@@ -341,7 +341,7 @@ node dist/package/cli.js bump --root test/fixtures/android-groovy --platform and
 
 The dry run should show `versionName` going from `1.2.3` to `1.2.4` and `versionCode` from `41` to `42`. To try your own project, pass its directory to `--root` and select the appropriate platform.
 
-Run `yarn check` for the Rust and Node test suites, then `yarn package:install-smoke` to install and execute the candidate tarball offline under both CLI names. Maintainers publish by pushing a tag matching the package version. See the [release instructions](https://github.com/nhcorrea/bump-version-cli/blob/main/CONTRIBUTING.md#releases), [changelog](https://github.com/nhcorrea/bump-version-cli/blob/main/CHANGELOG.md) and [security policy](https://github.com/nhcorrea/bump-version-cli/blob/main/SECURITY.md).
+Run `yarn check` for the Rust and Node test suites, then `yarn package:install-smoke` to install and execute the candidate tarball offline under both CLI names. Releases and npm publications run automatically after CI passes on `main` using Conventional Commits. See the [release instructions](https://github.com/nhcorrea/bump-version-cli/blob/main/CONTRIBUTING.md#releases), [changelog](https://github.com/nhcorrea/bump-version-cli/blob/main/CHANGELOG.md) and [security policy](https://github.com/nhcorrea/bump-version-cli/blob/main/SECURITY.md).
 
 ## License
 

@@ -54,11 +54,30 @@ Do not publish, tag, or push generated release commits from a pull request.
 
 ## Releases
 
-The [release workflow](.github/workflows/release.yml) publishes the verified tarball to npm when a matching `v*` tag is pushed. A merge to `main` runs CI.
+The [release workflow](.github/workflows/release.yml) runs automatically after the [CI workflow](.github/workflows/ci.yml) succeeds for a push to `main`. It computes the next Semantic Version from Conventional Commits since the latest `v*` tag (or releases the prepared initial `1.0.0` when no `v*` tag exists yet):
 
-1. In the npm package settings, confirm the GitHub Actions trusted publisher for owner `nhcorrea`, repository `bump-version-cli`, workflow filename `release.yml` and environment `npm`. Allow direct publishing with `npm publish`. [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
-2. In GitHub Settings → Environments, configure the `npm` environment to allow release tags matching `v*` if you want to enforce that restriction. GitHub creates a missing environment on its first run with no protection rules. [GitHub deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
-3. Confirm the version in `package.json` and date its entry in `CHANGELOG.md` when cutting the release. Run the clean-checkout checks above, then the following preflight from the repository root.
+- `fix:`, `perf:`, `revert:` → `patch` (`1.0.x`)
+- `feat:` → `minor` (`1.x.0`)
+- `!` suffix or `BREAKING CHANGE:` footer → `major` (`x.0.0`)
+- `docs:`, `chore:`, `ci:`, `test:`, `refactor:`, `style:`, `build:` (without breaking markers) → no release
+
+When a release is planned, the workflow synchronizes `package.json`, `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md`, checks npm version availability, runs `yarn check`, `yarn package:install-smoke`, `yarn benchmark --enforce`, `yarn npm audit --all --recursive` and `yarn release:prepare`, commits the metadata update with `[skip ci]` (when files changed), publishes the verified tarball to npm via Trusted Publishing (`--provenance`), tags `vX.Y.Z`, and creates the GitHub Release with notes and `.release/manifest.json`.
+
+### One-time repository and npm setup
+
+1. In the npm package settings, configure the GitHub Actions trusted publisher for owner `nhcorrea`, repository `bump-version-cli`, workflow filename `release.yml` and environment `npm`. Allow direct publishing with `npm publish`. [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
+2. In GitHub **Settings → Environments**, create/configure the `npm` environment and allow deployment from branch `main`. [GitHub deployment environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+3. If `main` has branch protection or a ruleset blocking pushes from `GITHUB_TOKEN`, configure a repository/environment secret named `RELEASE_TOKEN` (a GitHub App token or fine-grained PAT with `Contents: Read and write`) so the workflow can push `chore(release): vX.Y.Z [skip ci]` and tags. Without branch protection blocking Actions, `GITHUB_TOKEN` is used automatically.
+
+### Local release preview
+
+To preview the next automated release locally without modifying files:
+
+```bash
+yarn release:plan --json
+```
+
+To run the full local preflight against the current checkout:
 
 ```bash
 release_tag="v$(node -p "require('./package.json').version")"
@@ -68,11 +87,4 @@ yarn npm audit --all --recursive
 yarn release:prepare --verify-only --tag "$release_tag"
 ```
 
-Once the release changes are on `main` and CI has passed for the intended commit, tag that commit from a clean checkout. Pushing the tag starts publication.
-
-```bash
-git tag -a "$release_tag" -m "Release $release_tag"
-git push origin "refs/tags/$release_tag"
-```
-
-Check the **Release package** run in GitHub Actions, then verify the published version with `npm view @nhcorrea/bump-version-cli@latest version`. If the workflow fails, check that version on npm before retrying. A published version is immutable.
+After a release completes in GitHub Actions, verify the published version with `npm view @nhcorrea/bump-version-cli@latest version`. A published npm version is immutable.

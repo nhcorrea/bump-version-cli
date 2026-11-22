@@ -41,6 +41,8 @@ for (const workflowFile of workflowFiles) {
   }
 
   if (workflowFile === "release.yml") {
+    assert.match(workflow, /^\s+workflow_run:\s*$/m);
+    assert.match(workflow, /^\s+fetch-depth:\s+0\s*$/m);
     assert.match(workflow, /^\s+id-token:\s+write\s*$/m);
     assert.match(workflow, /^\s+environment:\s+npm\s*$/m);
     assert.match(workflow, /^\s+package-manager-cache:\s+false\s*$/m);
@@ -48,6 +50,7 @@ for (const workflowFile of workflowFiles) {
       workflow,
       /npm publish \.release\/package\.tgz --ignore-scripts/
     );
+    assert.match(workflow, /gh release create /);
     assert.match(workflow, /yarn benchmark --enforce/);
     assert.match(workflow, /yarn release:availability/);
     assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN/);

@@ -41,7 +41,10 @@ for (const argument of process.argv.slice(2)) {
 
 if (tagOptionIndex >= 0) {
   assert.ok(tagOption, "--tag requires a value");
-  assert.ok(verifyOnly, "--tag is only available with --verify-only");
+  assert.ok(
+    verifyOnly || process.env.GITHUB_EVENT_NAME === "workflow_run",
+    "--tag is only available with --verify-only or workflow_run"
+  );
 }
 
 if (!verifyOnly) {
@@ -50,10 +53,14 @@ if (!verifyOnly) {
     "true",
     "release artifacts may only be prepared by GitHub Actions"
   );
-  assert.equal(
-    process.env.GITHUB_REF_TYPE,
-    "tag",
-    "release workflow must run from a tag"
+  const isTagPush = process.env.GITHUB_REF_TYPE === "tag";
+  const isMainWorkflowRun =
+    process.env.GITHUB_EVENT_NAME === "workflow_run" &&
+    process.env.GITHUB_REF === "refs/heads/main" &&
+    Boolean(tagOption);
+  assert.ok(
+    isTagPush || isMainWorkflowRun,
+    "release workflow must run from a tag or from a verified main workflow_run with --tag"
   );
 }
 

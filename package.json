@@ -45,6 +45,8 @@
     "package:install-smoke": "yarn build && node scripts/package-smoke.mjs --install",
     "benchmark": "yarn build && node scripts/benchmark.mjs",
     "workflows:check": "node scripts/validate-workflows.mjs",
+    "release:plan": "node scripts/release-plan.mjs",
+    "release:sync": "node scripts/release-sync.mjs",
     "release:availability": "node scripts/registry-version-check.mjs",
     "release:prepare": "node scripts/release-check.mjs",
     "check": "yarn toolchain:check && yarn typecheck && cargo fmt --check && cargo clippy --locked --all-targets -- -D warnings && cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings && yarn test && yarn package:smoke && yarn workflows:check",
