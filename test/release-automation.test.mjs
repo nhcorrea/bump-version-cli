@@ -26,6 +26,10 @@ const testDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(testDirectory, "..");
 const repoUrl = "https://github.com/nhcorrea/bump-version-cli";
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function git(cwd, args) {
   return execFileSync("git", ["-c", "core.autocrlf=false", ...args], {
     cwd,
@@ -181,9 +185,13 @@ test("plans patch, minor, major, no-op, and resumed releases after v1.0.0", () =
 test("updates package.json and CHANGELOG.md cleanly and idempotently", () => {
   const pkg = readFileSync(join(repositoryRoot, "package.json"), "utf8");
   const changelog = readFileSync(join(repositoryRoot, "CHANGELOG.md"), "utf8");
+  const currentVersion = JSON.parse(pkg).version;
+  const previousTag = `v${currentVersion}`;
+  const nextVersion = bumpSemver(currentVersion, "minor");
+  const nextTag = `v${nextVersion}`;
 
-  const nextPkg = updatePackageJsonVersion(pkg, "1.1.0");
-  assert.equal(JSON.parse(nextPkg).version, "1.1.0");
+  const nextPkg = updatePackageJsonVersion(pkg, nextVersion);
+  assert.equal(JSON.parse(nextPkg).version, nextVersion);
 
   const notes = formatReleaseNotes(
     [
@@ -195,32 +203,38 @@ test("updates package.json and CHANGELOG.md cleanly and idempotently", () => {
     { repoUrl }
   );
   const nextChangelog = updateChangelog(changelog, {
-    version: "1.1.0",
+    version: nextVersion,
     date: "2026-11-22",
     notes,
-    previousTag: "v1.0.0",
+    previousTag,
     repoUrl,
   });
 
   assert.match(
     nextChangelog,
-    /## \[Unreleased\]\r?\n\r?\n## \[1\.1\.0\] - 2026-11-22\r?\n\r?\n### Features/
+    new RegExp(
+      `## \\[Unreleased\\]\\r?\\n\\r?\\n## \\[${escapeRegExp(nextVersion)}\\] - 2026-11-22\\r?\\n\\r?\\n### Features`
+    )
   );
   assert.match(
     nextChangelog,
-    /\[Unreleased\]: https:\/\/github\.com\/nhcorrea\/bump-version-cli\/compare\/v1\.1\.0\.\.\.HEAD/
+    new RegExp(
+      `\\[Unreleased\\]: ${escapeRegExp(repoUrl)}/compare/${escapeRegExp(nextTag)}\\.\\.\\.HEAD`
+    )
   );
   assert.match(
     nextChangelog,
-    /\[1\.1\.0\]: https:\/\/github\.com\/nhcorrea\/bump-version-cli\/compare\/v1\.0\.0\.\.\.v1\.1\.0/
+    new RegExp(
+      `\\[${escapeRegExp(nextVersion)}\\]: ${escapeRegExp(repoUrl)}/compare/${escapeRegExp(previousTag)}\\.\\.\\.${escapeRegExp(nextTag)}`
+    )
   );
-  assert.equal(extractChangelogSection(nextChangelog, "1.1.0"), notes);
+  assert.equal(extractChangelogSection(nextChangelog, nextVersion), notes);
   assert.equal(
     updateChangelog(nextChangelog, {
-      version: "1.1.0",
+      version: nextVersion,
       date: "2026-11-22",
       notes,
-      previousTag: "v1.0.0",
+      previousTag,
       repoUrl,
     }),
     nextChangelog
@@ -238,11 +252,17 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
       join(repositoryRoot, "CHANGELOG.md"),
       join(tempRoot, "CHANGELOG.md")
     );
+    const currentVersion = JSON.parse(
+      readFileSync(join(tempRoot, "package.json"), "utf8")
+    ).version;
+    const currentTag = `v${currentVersion}`;
+    const nextVersion = bumpSemver(currentVersion, "patch");
+    const nextTag = `v${nextVersion}`;
 
     git(tempRoot, ["init", "-b", "main"]);
     git(tempRoot, ["add", "."]);
     git(tempRoot, ["commit", "-m", "feat: initial v1 release"]);
-    git(tempRoot, ["tag", "-a", "v1.0.0", "-m", "Release v1.0.0"]);
+    git(tempRoot, ["tag", "-a", currentTag, "-m", `Release ${currentTag}`]);
 
     writeFileSync(join(tempRoot, "note.txt"), "fix\n", "utf8");
     git(tempRoot, ["add", "note.txt"]);
@@ -267,14 +287,20 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
     );
     const plan = JSON.parse(planJson);
     assert.equal(plan.shouldRelease, true);
-    assert.equal(plan.version, "1.0.1");
-    assert.equal(plan.tag, "v1.0.1");
-    assert.equal(plan.previousTag, "v1.0.0");
+    assert.equal(plan.version, nextVersion);
+    assert.equal(plan.tag, nextTag);
+    assert.equal(plan.previousTag, currentTag);
 
     const outputText = readFileSync(githubOutput, "utf8");
     assert.match(outputText, /^should_release=true$/m);
-    assert.match(outputText, /^version=1\.0\.1$/m);
-    assert.match(outputText, /^tag=v1\.0\.1$/m);
+    assert.match(
+      outputText,
+      new RegExp(`^version=${escapeRegExp(nextVersion)}$`, "m")
+    );
+    assert.match(
+      outputText,
+      new RegExp(`^tag=${escapeRegExp(nextTag)}$`, "m")
+    );
 
     execFileSync(
       process.execPath,
@@ -296,11 +322,11 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
 
     assert.equal(
       JSON.parse(readFileSync(join(tempRoot, "package.json"), "utf8")).version,
-      "1.0.1"
+      nextVersion
     );
     assert.match(
       readFileSync(join(tempRoot, "CHANGELOG.md"), "utf8"),
-      /## \[1\.0\.1\] - 2026-11-22/
+      new RegExp(`## \\[${escapeRegExp(nextVersion)}\\] - 2026-11-22`)
     );
 
     // A non-matching --verify-head-matches skips a superseded run cleanly.
