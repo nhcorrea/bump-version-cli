@@ -1,6 +1,6 @@
 {
   "name": "@nhcorrea/bump-version-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fast zero-dependency CLI to inspect, validate, set, and bump Android and iOS app versions in CI/CD, React Native CLI, Expo Bare, Gradle, and Xcode projects.",
   "license": "MIT",
   "author": "Nathã Corrêa",

@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-23
+
+### Features
+
+- replace Rust/Wasm engine and Commander with pure TypeScript and native parseArgs ([`939c560`](https://github.com/nhcorrea/bump-version-cli/commit/939c560c91adc729f3814b6e94597e64ac7be792))
+
 ## [1.0.0] - 2026-11-20
 
 ### Added
@@ -48,5 +54,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 Implementation-level records are available in [`docs/changes/`](docs/changes/).
 
-[Unreleased]: https://github.com/nhcorrea/bump-version-cli/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nhcorrea/bump-version-cli/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nhcorrea/bump-version-cli/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nhcorrea/bump-version-cli/compare/5b87f38...v1.0.0
