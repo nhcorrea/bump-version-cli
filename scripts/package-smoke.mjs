@@ -90,9 +90,7 @@ assert.equal(mainPath, binPaths[0].replace(/^\.\//, ""));
 assert.ok(!files.has("dist/index.js"), "stale dist/index.js is present");
 
 const runtimeFiles = [...files].filter(file => file.startsWith("dist/")).sort();
-assert.deepEqual(runtimeFiles, [
-  mainPath, "dist/package/bump-version.wasm.br", "dist/package/RUST-NOTICES.txt",
-].sort(), "unexpected or missing runtime files");
+assert.deepEqual(runtimeFiles, [mainPath], "unexpected or missing runtime files");
 
 for (const file of files) {
   assert.doesNotMatch(file, /^(?:docs|src|test|node_modules)\//);

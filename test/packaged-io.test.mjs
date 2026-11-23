@@ -18,7 +18,7 @@ function fixture(t, ...names) {
   return root;
 }
 
-// The package uses the real Wasm module and Node filesystem host. Capture only
+// The package uses the bundled TypeScript engine and Node filesystem host. Capture only
 // the CLI's terminal interface; each test scopes its filesystem fault with t.mock.
 function run(root, args) {
   let status = 0;

@@ -4,8 +4,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   parseSemver,
-  updateCargoLockVersion,
-  updateCargoTomlVersion,
   updateChangelog,
   updatePackageJsonVersion,
 } from "./release-commits.mjs";
@@ -45,17 +43,6 @@ function parseArgs(argv) {
   return options;
 }
 
-function readCargoPackageName(cargoToml) {
-  const normalized = cargoToml.replaceAll("\r\n", "\n");
-  const sectionMatch = /(?:^|\n)\[package\][ \t]*\n([\s\S]*?)(?=\n\[|$)/.exec(
-    normalized
-  );
-  assert.ok(sectionMatch, "Cargo.toml must contain a [package] section");
-  const nameMatch = /^name\s*=\s*"([^"]+)"/m.exec(sectionMatch[1]);
-  assert.ok(nameMatch, "Cargo.toml [package] section must contain a name");
-  return nameMatch[1];
-}
-
 function normalizeRepositoryUrl(repositoryField) {
   const raw =
     typeof repositoryField === "string"
@@ -78,15 +65,10 @@ function writeIfChanged(path, nextContent) {
 
 const options = parseArgs(process.argv.slice(2));
 const packageJsonPath = join(options.cwd, "package.json");
-const cargoTomlPath = join(options.cwd, "Cargo.toml");
-const cargoLockPath = join(options.cwd, "Cargo.lock");
 const changelogPath = join(options.cwd, "CHANGELOG.md");
 
 const packageJsonText = readFileSync(packageJsonPath, "utf8");
 const packageJson = JSON.parse(packageJsonText);
-const cargoTomlText = readFileSync(cargoTomlPath, "utf8");
-const cargoLockText = readFileSync(cargoLockPath, "utf8");
-const crateName = readCargoPackageName(cargoTomlText);
 
 const changedFiles = [];
 
@@ -97,24 +79,6 @@ if (
   )
 ) {
   changedFiles.push("package.json");
-}
-
-if (
-  writeIfChanged(
-    cargoTomlPath,
-    updateCargoTomlVersion(cargoTomlText, options.version)
-  )
-) {
-  changedFiles.push("Cargo.toml");
-}
-
-if (
-  writeIfChanged(
-    cargoLockPath,
-    updateCargoLockVersion(cargoLockText, crateName, options.version)
-  )
-) {
-  changedFiles.push("Cargo.lock");
 }
 
 if (existsSync(changelogPath)) {

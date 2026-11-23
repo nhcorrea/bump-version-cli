@@ -138,9 +138,7 @@ for (const binPath of binPaths) {
 }
 
 const runtimeFiles = [...files].filter(file => file.startsWith("dist/")).sort();
-assert.deepEqual(runtimeFiles, [
-  mainPath, "dist/package/bump-version.wasm.br", "dist/package/RUST-NOTICES.txt",
-].sort(), "unexpected or missing runtime files");
+assert.deepEqual(runtimeFiles, [mainPath], "unexpected or missing runtime files");
 
 const packedTarball = join(temporaryRoot, manifest.filename);
 const tarballBytes = readFileSync(packedTarball);

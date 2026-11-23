@@ -18,8 +18,6 @@ import {
   formatReleaseNotes,
   parseConventionalCommit,
   planRelease,
-  updateCargoLockVersion,
-  updateCargoTomlVersion,
   updateChangelog,
   updatePackageJsonVersion,
 } from "../scripts/release-commits.mjs";
@@ -101,7 +99,7 @@ test("plans initial 1.0.0 release using curated changelog notes without double b
     latestTag: null,
     commits: [
       { hash: "aaaaaaa1111111", subject: "docs: prepare npm release v1.0.0" },
-      { hash: "bbbbbbb2222222", subject: "feat: ship Rust engine in wasm" },
+      { hash: "bbbbbbb2222222", subject: "feat: ship v1 CLI" },
     ],
     existingChangelog: changelog,
     repoUrl,
@@ -113,7 +111,7 @@ test("plans initial 1.0.0 release using curated changelog notes without double b
   assert.equal(plan.tag, "v1.0.0");
   assert.equal(plan.updateFiles, false);
   assert.match(plan.notes, /### Added/);
-  assert.match(plan.notes, /Rust/);
+  assert.match(plan.notes, /Node `>=22\.12\.0`/);
 });
 
 test("plans patch, minor, major, no-op, and resumed releases after v1.0.0", () => {
@@ -180,39 +178,12 @@ test("plans patch, minor, major, no-op, and resumed releases after v1.0.0", () =
   assert.match(resumed.notes, /add catalog hint/);
 });
 
-test("updates package.json, Cargo.toml, Cargo.lock, and CHANGELOG.md cleanly and idempotently", () => {
+test("updates package.json and CHANGELOG.md cleanly and idempotently", () => {
   const pkg = readFileSync(join(repositoryRoot, "package.json"), "utf8");
-  const cargoToml = readFileSync(join(repositoryRoot, "Cargo.toml"), "utf8");
-  const cargoLock = readFileSync(join(repositoryRoot, "Cargo.lock"), "utf8");
   const changelog = readFileSync(join(repositoryRoot, "CHANGELOG.md"), "utf8");
 
   const nextPkg = updatePackageJsonVersion(pkg, "1.1.0");
   assert.equal(JSON.parse(nextPkg).version, "1.1.0");
-
-  const nextCargoToml = updateCargoTomlVersion(cargoToml, "1.1.0");
-  assert.match(nextCargoToml, /^version = "1\.1\.0"\r?$/m);
-
-  const nextCargoLock = updateCargoLockVersion(
-    cargoLock,
-    "bump-version",
-    "1.1.0"
-  );
-  assert.match(
-    nextCargoLock,
-    /\[\[package\]\]\r?\nname = "bump-version"\r?\nversion = "1\.1\.0"\r?\ndependencies = \[/
-  );
-  assert.match(nextCargoLock, /name = "serde"\r?\nversion = "/);
-
-  const crlfCargoLock = cargoLock.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n");
-  const nextCrlfCargoLock = updateCargoLockVersion(
-    crlfCargoLock,
-    "bump-version",
-    "1.1.0"
-  );
-  assert.match(
-    nextCrlfCargoLock,
-    /\[\[package\]\]\r\nname = "bump-version"\r\nversion = "1\.1\.0"\r\ndependencies = \[/
-  );
 
   const notes = formatReleaseNotes(
     [
@@ -243,10 +214,7 @@ test("updates package.json, Cargo.toml, Cargo.lock, and CHANGELOG.md cleanly and
     nextChangelog,
     /\[1\.1\.0\]: https:\/\/github\.com\/nhcorrea\/bump-version-cli\/compare\/v1\.0\.0\.\.\.v1\.1\.0/
   );
-  assert.equal(
-    extractChangelogSection(nextChangelog, "1.1.0"),
-    notes
-  );
+  assert.equal(extractChangelogSection(nextChangelog, "1.1.0"), notes);
   assert.equal(
     updateChangelog(nextChangelog, {
       version: "1.1.0",
@@ -265,14 +233,6 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
     copyFileSync(
       join(repositoryRoot, "package.json"),
       join(tempRoot, "package.json")
-    );
-    copyFileSync(
-      join(repositoryRoot, "Cargo.toml"),
-      join(tempRoot, "Cargo.toml")
-    );
-    copyFileSync(
-      join(repositoryRoot, "Cargo.lock"),
-      join(tempRoot, "Cargo.lock")
     );
     copyFileSync(
       join(repositoryRoot, "CHANGELOG.md"),
@@ -337,14 +297,6 @@ test("release-plan and release-sync work end-to-end in a temporary git repositor
     assert.equal(
       JSON.parse(readFileSync(join(tempRoot, "package.json"), "utf8")).version,
       "1.0.1"
-    );
-    assert.match(
-      readFileSync(join(tempRoot, "Cargo.toml"), "utf8"),
-      /^version = "1\.0\.1"\r?$/m
-    );
-    assert.match(
-      readFileSync(join(tempRoot, "Cargo.lock"), "utf8"),
-      /name = "bump-version"\r?\nversion = "1\.0\.1"/
     );
     assert.match(
       readFileSync(join(tempRoot, "CHANGELOG.md"), "utf8"),

@@ -156,10 +156,10 @@ jobs:
           RELEASE_TAG: ${{ needs.plan.outputs.tag }}
           RELEASE_GIT_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
         run: |
-          if [ -n "$(git status --porcelain -- package.json Cargo.toml Cargo.lock CHANGELOG.md)" ]; then
+          if [ -n "$(git status --porcelain -- package.json CHANGELOG.md)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -- package.json Cargo.toml Cargo.lock CHANGELOG.md
+            git add -- package.json CHANGELOG.md
             git commit -m "chore(release): ${RELEASE_TAG} [skip ci]"
             git -c credential.helper= \
               -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${RELEASE_GIT_TOKEN}"; }; f' \

@@ -100,5 +100,5 @@ test("maps an unexpected automation failure to JSON exit code 70", () => {
   });
 });
 
-// Native filesystem cases run in tests/migration.rs. The published Node host
-// is exercised separately in packaged-io.test.mjs.
+// Core engine and transactional rollback cases run in core-and-transactions.test.mjs.
+// The published Node host is exercised separately in packaged-io.test.mjs.

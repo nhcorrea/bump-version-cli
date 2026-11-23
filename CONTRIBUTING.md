@@ -6,7 +6,6 @@ Contributions are welcome. Keep changes small enough to review, preserve project
 
 - Node.js 26.13.1 LTS for development, matching `.node-version`.
 - Corepack 0.36.0 and Yarn 3.8.7.
-- rustup and the system linker for your platform. When you run Cargo from the checkout, rustup reads `rust-toolchain.toml` and installs Rust 1.100.0, Clippy, rustfmt and `wasm32-unknown-unknown`. On Windows use the MSVC toolchain with Visual Studio C++ Build Tools.
 
 Consumers need Node.js 22.12.0 or newer and npm.
 
@@ -20,7 +19,7 @@ yarn check
 yarn package:install-smoke
 ```
 
-Cargo builds the same engine for native tests and for Node's WebAssembly runtime. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package, including the compressed Wasm and license notices, must stay below 200,000 bytes and may have at most one direct npm runtime dependency. See the [package measurements](docs/changes/packaged-io-2026-11-18.md) and [hosted CI results](docs/changes/windows-ci-toolchain-2026-11-18.md).
+`esbuild` bundles the TypeScript CLI into `dist/package/cli.js` with zero third-party runtime dependencies, using Node's built-in `node:util` `parseArgs` and `node:fs` APIs. The benchmark runs the published CommonJS entry and requires p95 below 100 ms for `--version` and 150 ms for `inspect`. The complete unpacked npm package must stay below 100,000 bytes with zero direct npm runtime dependencies. See the [TypeScript engine migration notes](docs/changes/typescript-native-cli-2026-11-23.md).
 
 After building, try the candidate as a consumer from an empty directory. These shell commands pack the checkout and run its tarball offline.
 
@@ -34,7 +33,7 @@ archive=$(npm pack --silent --ignore-scripts --pack-destination "$consumer")
 
 - Do not introduce a new runtime dependency without measured justification.
 - Do not select the first ambiguous version source silently.
-- Parsing and transformation belong outside Commander/readline/presentation.
+- Parsing and transformation belong outside CLI parsing/readline/presentation.
 - Dry-run and commit must use the same `ChangePlan`.
 - A no-op must preserve bytes and mtime.
 - JSON and exit codes are public API; update contract tests for any intentional change.
@@ -61,7 +60,7 @@ The [release workflow](.github/workflows/release.yml) runs automatically after t
 - `!` suffix or `BREAKING CHANGE:` footer → `major` (`x.0.0`)
 - `docs:`, `chore:`, `ci:`, `test:`, `refactor:`, `style:`, `build:` (without breaking markers) → no release
 
-When a release is planned, the workflow synchronizes `package.json`, `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md`, checks npm version availability, runs `yarn check`, `yarn package:install-smoke`, `yarn benchmark --enforce`, `yarn npm audit --all --recursive` and `yarn release:prepare`, commits the metadata update with `[skip ci]` (when files changed), publishes the verified tarball to npm via Trusted Publishing (`--provenance`), tags `vX.Y.Z`, and creates the GitHub Release with notes and `.release/manifest.json`.
+When a release is planned, the workflow synchronizes `package.json` and `CHANGELOG.md`, checks npm version availability, runs `yarn check`, `yarn package:install-smoke`, `yarn benchmark --enforce`, `yarn npm audit --all --recursive` and `yarn release:prepare`, commits the metadata update with `[skip ci]` (when files changed), publishes the verified tarball to npm via Trusted Publishing (`--provenance`), tags `vX.Y.Z`, and creates the GitHub Release with notes and `.release/manifest.json`.
 
 ### One-time repository and npm setup
 

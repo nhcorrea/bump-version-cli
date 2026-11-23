@@ -1,6 +1,55 @@
-const { BumpVersionError, isBumpVersionError } = require("../errors.cjs");
-const AUTOMATION_SCHEMA_VERSION = 1;
-function errorHint(error) {
+import { BumpVersionError, isBumpVersionError } from "../errors";
+import type {
+  AndroidState,
+  AutomationCommand,
+  AutomationResult,
+  IosState,
+  MatchCounts,
+  SelectionDocument,
+} from "../types";
+
+export const AUTOMATION_SCHEMA_VERSION = 1;
+
+export interface AutomationSuccessDocument {
+  schemaVersion: 1;
+  ok: true;
+  command: AutomationCommand;
+  changed: boolean;
+  dryRun: boolean;
+  root: string;
+  platforms: {
+    android?: {
+      path: string;
+      before: AndroidState;
+      after: AndroidState;
+      matches: number;
+      matchCounts: MatchCounts;
+    };
+    ios?: {
+      path: string;
+      selection?: SelectionDocument;
+      before: IosState;
+      after: IosState;
+      matches: number;
+      matchCounts: MatchCounts;
+    };
+  };
+  warnings: string[];
+}
+
+export interface AutomationErrorDocument {
+  schemaVersion: 1;
+  ok: false;
+  command: AutomationCommand;
+  error: {
+    code: string;
+    message: string;
+    hint: string;
+    details: Record<string, unknown>;
+  };
+}
+
+export function errorHint(error: unknown): string {
   if (!isBumpVersionError(error)) {
     return "Re-run with --debug and inspect the stack trace before retrying.";
   }
@@ -36,8 +85,11 @@ function errorHint(error) {
   }
   return "Inspect the target and rollback state; do not retry blindly.";
 }
-function automationSuccessDocument(result) {
-  const platforms = {};
+
+export function automationSuccessDocument(
+  result: AutomationResult,
+): AutomationSuccessDocument {
+  const platforms: AutomationSuccessDocument["platforms"] = {};
   if (result.platforms.android) {
     const android = result.platforms.android;
     platforms.android = {
@@ -70,7 +122,11 @@ function automationSuccessDocument(result) {
     warnings: result.warnings,
   };
 }
-function automationErrorDocument(command, error) {
+
+export function automationErrorDocument(
+  command: AutomationCommand,
+  error: unknown,
+): AutomationErrorDocument {
   if (isBumpVersionError(error)) {
     return {
       schemaVersion: AUTOMATION_SCHEMA_VERSION,
@@ -99,7 +155,8 @@ function automationErrorDocument(command, error) {
     },
   };
 }
-function errorDebugText(error) {
+
+export function errorDebugText(error: unknown): string | undefined {
   if (error instanceof BumpVersionError) {
     const cause =
       error.cause instanceof Error ? error.cause.stack : error.cause;
@@ -110,9 +167,44 @@ function errorDebugText(error) {
   return error instanceof Error ? error.stack : undefined;
 }
 
-module.exports = {
-  automationErrorDocument,
-  automationSuccessDocument,
-  errorDebugText,
-  errorHint,
-};
+export function formatAutomationResult(result: AutomationResult): string {
+  const lines = [
+    `${result.command}: ${
+      result.changed
+        ? result.dryRun
+          ? "changes planned (dry-run)"
+          : "changed"
+        : "no changes"
+    }`,
+    `Root: ${result.root}`,
+  ];
+  if (result.platforms.android) {
+    const android = result.platforms.android;
+    lines.push(
+      `Android  ${android.path}`,
+      `  versionName  ${android.before.versionName} -> ${android.after.versionName}`,
+      `  versionCode  ${android.before.versionCode} -> ${android.after.versionCode}`,
+      `  matches      ${android.matches.total}`,
+    );
+  }
+  if (result.platforms.ios) {
+    const ios = result.platforms.ios;
+    lines.push(
+      `iOS      ${ios.path}`,
+      ...(ios.selection
+        ? [
+            `  selection    ${[
+              ios.selection.allTargets ? "all targets" : ios.selection.target,
+              ios.selection.configuration,
+            ]
+              .filter(Boolean)
+              .join(" / ")}`,
+          ]
+        : []),
+      `  marketing    ${ios.before.marketingVersion} -> ${ios.after.marketingVersion}`,
+      `  build        ${ios.before.buildNumber} -> ${ios.after.buildNumber}`,
+      `  matches      ${ios.matches.total}`,
+    );
+  }
+  return lines.join("\n");
+}

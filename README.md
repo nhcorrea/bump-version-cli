@@ -6,7 +6,7 @@
 [![Zero runtime dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://www.npmjs.com/package/@nhcorrea/bump-version-cli)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Fast, CI/CD-ready CLI powered by a Rust WebAssembly engine to inspect, validate, set, and bump Android and iOS app versions.**
+**Fast, zero-dependency, CI/CD-ready CLI to inspect, validate, set, and bump Android and iOS app versions.**
 
 Works seamlessly with **React Native CLI**, **Expo Bare**, native **Android** (`build.gradle` / `build.gradle.kts`), and native **iOS** (`project.pbxproj` / Xcode) projects — with **zero runtime dependencies**, non-interactive automation by default, stable JSON output, and atomic multi-file writes with verification and rollback.
 
@@ -22,21 +22,21 @@ Works seamlessly with **React Native CLI**, **Expo Bare**, native **Android** (`
 - [Configuration file](#configuration-file)
 - [Project support](#project-support)
 - [Write safety & architecture](#write-safety--architecture)
-- [What's new in v1.0](#whats-new-in-v10)
+- [Highlights](#highlights)
 - [Legacy commands](#legacy-commands)
 - [Development & releases](#development--releases)
 
 ## Why Bump Version CLI?
 
-- **Rust + WebAssembly speed:** Android and iOS parsing, version planning, validation, and transactional writes run in Rust compiled to Wasm (`< 50 ms` p95 startup and inspection).
-- **Zero runtime dependencies & offline-safe install:** Ships as a compact `< 200 KB` npm package with no native compilation, no platform-specific binaries, and no `postinstall` scripts (`--ignore-scripts` compatible).
+- **Fast startup & lightweight footprint:** Single-file TypeScript bundle built with `esbuild` using only Node.js built-ins (`node:util` `parseArgs`, `node:fs`, `node:path`, `node:crypto`) — no third-party runtime code, no Wasm initialization overhead, and `< 50 ms` typical startup and inspection.
+- **Zero runtime dependencies & offline-safe install:** Ships as a compact `< 100 KB` unpacked npm package (~21 KB tarball) with no native compilation, no platform-specific binaries, and no `postinstall` scripts (`--ignore-scripts` compatible).
 - **Built for CI/CD pipelines:** Canonical commands (`inspect`, `set`, `bump`, `check`) never prompt, work with closed `stdin`, emit stable JSON schema 1, write atomic `--output-file` reports, and return documented exit codes.
 - **Atomic writes, verification & rollback:** `--dry-run` and commit share the exact same `ChangePlan`. Writes stage next to target files, guard against concurrent edits, verify parsed output on disk, and roll back in reverse order on failure.
 - **Byte-preserving native edits:** Updates Android `versionName` / `versionCode` (Groovy and Kotlin DSL) and iOS `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` (with explicit `PBXNativeTarget` and build configuration selection) while preserving comments, quotes, semicolons, whitespace, CRLF/LF, and file modes.
 
 ## Requirements
 
-- **Node.js `>=22.12.0`** and npm. The tarball includes the Rust engine as Brotli-compressed WebAssembly, expanded in memory at runtime.
+- **Node.js `>=22.12.0`** and npm.
 - Android or iOS native project files matching the [project support matrix](#project-support).
 
 ## Install
@@ -340,17 +340,17 @@ Unsupported or ambiguous sources return exit `4`; missing files or projects retu
 ## Write safety & architecture
 
 1. **Confinement:** Selected project, config, and `--output-file` paths are confined inside `--root` (blocking lexical traversal and symlink escapes).
-2. **Unified planning:** Every platform is parsed and validated into a `ChangePlan` inside the Rust WebAssembly core before touching disk.
+2. **Unified planning:** Every platform is parsed and validated into a `ChangePlan` in the strictly typed TypeScript core before touching disk.
 3. **Atomic commit & rollback:** Each modified file is staged in a same-directory temp file with preserved permissions, checked against concurrent modifications immediately before atomic rename, read back, and re-parsed for verification. Any failure triggers reverse-order rollback across previously updated files.
 4. **Idempotent no-ops:** When target values already match, project files are untouched (preserving exact bytes and `mtime`). Passing `--output-file` still writes the JSON report (including during `--dry-run`).
 
-## What's new in v1.0
+## Highlights
 
-- **Rust WebAssembly core** replacing legacy JavaScript string transforms for faster execution and stronger safety guarantees.
+- **Pure TypeScript single-file runtime:** Built directly on Node.js built-ins (including `node:util` `parseArgs`) with zero third-party runtime code, faster cold startup, and a `< 100 KB` unpacked npm package.
 - **CI/CD-first commands** (`inspect`, `set`, `bump`, `check`), JSON schema 1, public exit-code contract, and `.bump-version.json` support.
 - **Android Kotlin DSL (`build.gradle.kts`)** and `=` assignment support, plus Play Store `versionCode` bounds and downgrade protection.
 - **Multi-target iOS selection** (`--ios-target`, `--ios-configuration`, `--all-targets`) with `;`, whitespace, and EOL preservation.
-- **Zero runtime dependencies** (removed `figlet`, unconditional ANSI colors, and terminal clearing) and automated CI/CD releases with npm provenance.
+- **Automated CI/CD releases** with Conventional Commits, cross-OS verification, and npm Trusted Publishing (`--provenance`).
 
 See the full release history in [CHANGELOG.md](CHANGELOG.md).
 
@@ -363,13 +363,13 @@ Interactive 0.x commands remain available as deprecated transition aliases:
 | `android-version` | `inspect --platform android` |
 | `ios-version <project>` | `inspect --platform ios --ios-project <project>` |
 | `android` | `set --platform android` with explicit flags |
-| `ios <project>` | `set --platform ios --ios-project <project>` with explicit flags |
+| `ios <project>` | `set --platform ios --ios-project <project>` |
 
 Legacy mutation commands fail fast under `CI=true` or `--non-interactive`.
 
 ## Development & releases
 
-Building from source requires **Node 26.13.1 LTS**, **Corepack 0.36.0** (Yarn 3.8.7), **rustup** (pins Rust `1.100.0`, `rustfmt`, `clippy`, and `wasm32-unknown-unknown`), and a system linker:
+Building from source requires **Node 26.13.1 LTS** and **Corepack 0.36.0** (Yarn 3.8.7):
 
 ```bash
 npm install --global corepack@0.36.0
